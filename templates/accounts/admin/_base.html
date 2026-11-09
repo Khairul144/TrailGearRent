@@ -1,0 +1,251 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin — TrailGear Rent{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/rentals.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+</head>
+<body id="top" data-dash="admin">
+
+  <!-- ===== TOP BAR ===== -->
+  <div class="top-bar">
+    <div class="container top-bar-inner">
+      <div class="top-left">
+        <a href="mailto:halo@trailgearrent.com" class="top-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          halo@trailgearrent.com
+        </a>
+        <span class="top-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          {% now "l, d F Y" %}
+        </span>
+      </div>
+      <div class="top-right">
+        <span class="top-note">Area Administrasi — <strong class="text-brand">Admin</strong></span>
+        <a href="/" class="btn-pill">Lihat Toko
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header header-solid" id="header">
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <img src="{% static 'assets/img/logo/logo_navbar_white.png' %}?v=2" alt="TrailGear Rent" class="logo-img">
+        <span class="logo-text">TrailGear<span class="logo-accent">Rent</span></span>
+      </a>
+      <nav class="main-nav" id="mainNav">
+        <ul>
+          <li><a href="/" class="nav-link">Beranda</a></li>
+          <li><a href="{% url 'catalog:product_list' %}" class="nav-link">Katalog</a></li>
+          <li><a href="{% url 'accounts:cashier_dashboard' %}" class="nav-link">Dashboard Kasir</a></li>
+          <li><a href="{% url 'rentals:staff_order_list' %}" class="nav-link">Pesanan</a></li>
+        </ul>
+      </nav>
+      <div class="header-right">
+        <div class="account-menu" id="accountItem">
+          <button class="account-toggle" id="accountToggle" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar-circle">{{ user.username|first|upper }}</span>
+            <span class="account-name">{{ user.display_name }}<span class="role-chip">{{ role|default:"Admin" }}</span></span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <ul class="account-dropdown" id="accountMenu">
+            <li><a href="{% url 'accounts:admin_dashboard' %}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Dashboard Admin</a></li>
+            <li><a href="{% url 'accounts:settings' %}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.42.66.78.85.3.16.63.24.97.24H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+              Pengaturan</a></li>
+            <li class="divider"></li>
+            <li>
+              <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="logout">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>
+                  Logout
+                </button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== DASHBOARD ===== -->
+  <main class="dash">
+    <div class="container">
+      <div class="dash-mobile-bar">
+        <button class="dash-toggle" id="dashToggle" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Menu Dashboard
+        </button>
+      </div>
+
+      <div class="dash-grid">
+
+        <!-- Sidebar -->
+        <aside class="dash-side" id="dashSide">
+          <div class="dash-user">
+            <span class="avatar-circle">{{ user.username|first|upper }}</span>
+            <div>
+              <div class="dash-user-name">{{ user.display_name }}</div>
+              <div class="dash-user-mail">{{ role|default:"Admin" }} &bull; {{ user.email }}</div>
+            </div>
+          </div>
+
+          <nav class="dash-nav admin-nav">
+            <div class="admin-nav-label">Utama</div>
+            <a href="{% url 'accounts:admin_dashboard' %}" class="{% if active_menu == 'dashboard' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Dashboard
+            </a>
+
+            <div class="admin-nav-label">Operasional</div>
+            <a href="{% url 'accounts:admin_rentals' %}" class="{% if active_menu == 'rentals' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+              Pesanan Sewa
+              {% if badge_open_orders %}<span class="nav-badge">{{ badge_open_orders }}</span>{% endif %}
+            </a>
+            <a href="{% url 'accounts:admin_payments' %}" class="{% if active_menu == 'payments' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              Pembayaran
+              {% if badge_pending_payment %}<span class="nav-badge alert">{{ badge_pending_payment }}</span>{% endif %}
+            </a>
+            <a href="{% url 'accounts:admin_products' %}" class="{% if active_menu == 'products' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 16-9 5-9-5V8l9-5 9 5v8Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>
+              Barang &amp; Stok
+              <span class="nav-badge">{{ badge_products }}</span>
+            </a>
+
+            <div class="admin-nav-label">Manajemen</div>
+            <a href="{% url 'accounts:admin_users' %}" class="{% if active_menu == 'users' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Users
+              <span class="nav-badge">{{ badge_users }}</span>
+            </a>
+            <a href="{% url 'accounts:admin_staff' %}" class="{% if active_menu == 'staff' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+              Staff / Kasir
+              <span class="nav-badge">{{ badge_staff }}</span>
+            </a>
+
+            <div class="admin-nav-label">Sistem</div>
+            <a href="{% url 'accounts:admin_security' %}" class="{% if active_menu == 'security' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+              Keamanan
+              {% if badge_security %}<span class="nav-badge alert">{{ badge_security }}</span>{% endif %}
+            </a>
+            <a href="{% url 'accounts:admin_reports' %}" class="{% if active_menu == 'reports' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 3-4 3 3 5-7"/></svg>
+              Laporan
+            </a>
+
+            <div class="admin-nav-divider"></div>
+            <form method="post" action="{% url 'accounts:logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="logout">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>
+                Keluar
+              </button>
+            </form>
+          </nav>
+        </aside>
+
+        <!-- Konten -->
+        <section class="dash-content">
+          <div class="page-head">
+            <div>
+              <h1 class="dash-title">{% block page_title %}{% endblock %}</h1>
+              <p class="dash-sub" style="margin-bottom:0;">{% block page_sub %}{% endblock %}</p>
+            </div>
+            <div class="page-head-actions">{% block page_actions %}{% endblock %}</div>
+          </div>
+
+          {% if messages %}
+            {% for message in messages %}
+              <div class="page-msg {% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}" style="margin:0 0 18px">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          {% block admin_content %}{% endblock %}
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <div class="dash-overlay" id="dashOverlay"></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Sidebar mobile
+    (function () {
+      const t = document.getElementById("dashToggle");
+      const side = document.getElementById("dashSide");
+      const ov = document.getElementById("dashOverlay");
+      if (t && side) {
+        t.addEventListener("click", () => { side.classList.toggle("open"); if (ov) ov.classList.toggle("show"); });
+      }
+      if (ov) ov.addEventListener("click", () => { side.classList.remove("open"); ov.classList.remove("show"); });
+    })();
+
+    // Pencarian tabel sisi klien
+    (function () {
+      const input = document.getElementById("tableSearch");
+      if (!input) return;
+      const rows = document.querySelectorAll("[data-search]");
+      input.addEventListener("input", () => {
+        const q = input.value.trim().toLowerCase();
+        rows.forEach(row => {
+          row.hidden = q !== "" && !row.dataset.search.includes(q);
+        });
+      });
+    })();
+
+    // Toast
+    let toastTimer;
+    function showToast(text) {
+      const el = document.getElementById("toast");
+      if (!el) return;
+      el.textContent = text;
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+    }
+    window.showToast = showToast;
+
+    // Dropdown akun
+    (function () {
+      const item = document.getElementById("accountItem");
+      if (!item) return;
+      const toggle = document.getElementById("accountToggle");
+      const open = () => { item.classList.add("open"); toggle.setAttribute("aria-expanded", "true"); };
+      const close = () => { item.classList.remove("open"); toggle.setAttribute("aria-expanded", "false"); };
+      item.addEventListener("mouseenter", () => { if (window.innerWidth > 991) open(); });
+      item.addEventListener("mouseleave", () => { if (window.innerWidth > 991) close(); });
+      toggle.addEventListener("click", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.innerWidth <= 991) item.classList.contains("open") ? close() : open();
+      });
+      document.addEventListener("click", e => { if (!item.contains(e.target)) close(); });
+    })();
+  </script>
+  {% block admin_scripts %}{% endblock %}
+</body>
+</html>

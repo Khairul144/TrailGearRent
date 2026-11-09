@@ -1,0 +1,112 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Laporan — Admin TrailGear{% endblock %}
+{% block page_title %}Laporan{% endblock %}
+{% block page_sub %}Ringkasan pendapatan dan performa penyewaan.{% endblock %}
+
+{% block page_actions %}
+  <button type="button" class="btn-xs" onclick="window.print()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+    Cetak
+  </button>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini"><div class="k">Pendapatan Sewa</div><div class="v small">{{ revenue_fmt }}</div></div>
+  <div class="adm-mini"><div class="k">Jaminan Sewa</div><div class="v small">KTP Asli Fisik</div></div>
+  <div class="adm-mini"><div class="k">Total Pesanan</div><div class="v">{{ order_count }}</div></div>
+  <div class="adm-mini"><div class="k">Barang Aktif</div><div class="v">{{ total_products }}</div></div>
+</div>
+
+<div class="adm-split">
+
+  <div class="panel" style="margin-top:0">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Pesanan per Status</div>
+        <div class="panel-sub">Jumlah &amp; nilai transaksi</div>
+      </div>
+    </div>
+    <div class="adm-bars">
+      {% for row in status_rows %}
+      <div class="adm-bar-row">
+        <span>{{ row.label }}</span>
+        <div class="adm-bar-track">
+          <div class="adm-bar-fill {% if row.kode == 'MENUNGGU_PEMBAYARAN' %}pending{% elif row.kode == 'DIAMBIL' %}active{% elif row.kode == 'KEMBALI' %}returned{% elif row.kode == 'DIBATALKAN' %}cancelled{% endif %}"
+               style="width:{% widthratio row.jumlah order_count 100 %}%;min-width:4px"></div>
+        </div>
+        <span class="num">{{ row.jumlah }}</span>
+      </div>
+      {% empty %}
+        <div class="adm-muted">Belum ada data pesanan.</div>
+      {% endfor %}
+    </div>
+    <div class="panel-foot">
+      <span>Nilai transaksi mengikuti grand total masing-masing pesanan.</span>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:0">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Produk Terlaris</div>
+        <div class="panel-sub">Berdasarkan unit disewa</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr><th>Produk</th><th>Unit</th><th>Nilai</th></tr>
+          </thead>
+          <tbody>
+            {% for p in top_products %}
+            <tr>
+              <td>{{ p.name }}</td>
+              <td class="mono">{{ p.unit }}</td>
+              <td class="mono">{{ p.nilai_fmt }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">Belum ada penyewaan selesai.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Rincian Nilai per Status</div>
+      <div class="panel-sub">Grand total pesanan yang tercatat</div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr><th>Status</th><th>Jumlah Pesanan</th><th>Nilai (Rp)</th></tr>
+        </thead>
+        <tbody>
+          {% for row in status_rows %}
+          <tr>
+            <td><span class="badge {% if row.kode == 'MENUNGGU_PEMBAYARAN' %}pending{% elif row.kode == 'DIAMBIL' %}active{% elif row.kode == 'KEMBALI' %}returned{% elif row.kode == 'DIBATALKAN' %}cancelled{% else %}paid{% endif %}">{{ row.label }}</span></td>
+            <td class="mono">{{ row.jumlah }}</td>
+            <td class="mono">{{ row.nilai_fmt }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">Belum ada data.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

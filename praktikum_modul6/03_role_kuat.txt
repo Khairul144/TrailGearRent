@@ -1,0 +1,16 @@
+﻿=== 3.1 PEMBUATAN ROLE uji_kuat ===
+DROP ROLE IF EXISTS uji_kuat;
+DROP ROLE
+CREATE ROLE uji_kuat LOGIN PASSWORD '<REDACTED_STRONG_PASSWORD>';
+CREATE ROLE
+
+=== 3.2 UJI LOGIN PASSWORD BENAR ===
+SELECT current_user;
+ current_user 
+--------------
+ uji_kuat
+(1 row)
+
+=== 3.3 UJI LOGIN PASSWORD SALAH ===
+psql: error: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password gagal diotentikasi untuk pengguna  ½ uji_kuat ╗
+

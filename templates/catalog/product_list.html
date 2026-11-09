@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }} — TrailGear Rent</title>
+  <meta name="description" content="Daftar peralatan camping & outdoor yang bisa disewa di TrailGear Rent: tenda, carrier, sleeping bag, jaket, dan lainnya.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}">
+  <link rel="stylesheet" href="{% static 'css/catalog.css' %}">
+</head>
+<body id="top" class="catalog-page">
+
+  {% include "partials/header.html" %}
+
+  <!-- ===== PAGE HEADER ===== -->
+  <section class="page-banner">
+    <div class="page-banner-overlay"></div>
+    <div class="container page-banner-content">
+      <h1 class="page-banner-title">{{ page_title }}</h1>
+      <p class="page-banner-sub">Cari peralatan camping murah di sini</p>
+    </div>
+  </section>
+
+  {% if messages %}
+  <div class="container" style="margin-top: 24px; margin-bottom: -10px;">
+    {% for message in messages %}
+      <div class="page-msg {{ message.tags }}" role="alert">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+          <span>{{ message }}</span>
+        </div>
+        <button type="button" class="msg-close" onclick="this.parentElement.remove()" aria-label="Tutup">&times;</button>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ===== JADWAL SEWA ===== -->
+  <section class="search-section catalog-search">
+    <div class="container">
+      {% include "partials/schedule_form.html" with show_search=False %}
+    </div>
+  </section>
+
+  <!-- ===== DAFTAR PERALATAN ===== -->
+  <section class="catalog-section">
+    <div class="container catalog-layout">
+
+      <!-- Sidebar filter -->
+      <aside class="catalog-sidebar" id="catalogSidebar">
+        <form method="get" action="{% url 'catalog:product_list' %}" id="filterForm">
+          {% if schedule.start %}<input type="hidden" name="tgl" value="{{ schedule.start|date:'Y-m-d' }}">{% endif %}
+          {% if schedule.duration %}<input type="hidden" name="durasi" value="{{ schedule.duration }}">{% endif %}
+          <input type="hidden" name="sort" value="{{ sort }}">
+
+          <div class="filter-box">
+            <h6 class="filter-title">Cari Peralatan</h6>
+            <div class="filter-search">
+              <input type="search" name="q" value="{{ query }}" maxlength="100" placeholder="Contoh: tenda, carrier..." aria-label="Cari peralatan">
+              <button type="submit" aria-label="Cari">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-box">
+            <h6 class="filter-title">Ketersediaan</h6>
+            <label class="cb-container">
+              <input type="checkbox" name="tersedia" value="1" class="auto-submit" {% if only_available %}checked{% endif %}>
+              <span>Hanya yang tersedia</span><span class="checkmark"></span>
+            </label>
+          </div>
+
+          <div class="filter-box">
+            <div class="filter-title-row">
+              <h6 class="filter-title">Kategori</h6>
+              {% if selected_cats %}<a href="{% url 'catalog:product_list' %}{% if schedule_qs %}?{{ schedule_qs }}{% endif %}" class="filter-reset">Reset</a>{% endif %}
+            </div>
+            <ul class="filter-list">
+              {% for c in categories %}
+              <li>
+                <label class="cb-container">
+                  <input type="checkbox" name="cat" value="{{ c.slug }}" class="auto-submit" {% if c.slug in selected_cats %}checked{% endif %}>
+                  <span>{{ c.name }}</span><span class="checkmark"></span>
+                </label>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          <noscript><button type="submit" class="btn-brand btn-sm" style="width:100%">Terapkan Filter</button></noscript>
+        </form>
+      </aside>
+
+      <!-- Konten produk -->
+      <div class="catalog-content">
+        <div class="catalog-toolbar">
+          <div class="toolbar-left">
+            <button type="button" class="btn-filter-mobile" id="btnFilterMobile">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+              Filter
+            </button>
+            <p class="result-count">
+              {% if paginator.count %}
+                Menampilkan <strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> dari <strong>{{ paginator.count }}</strong> peralatan
+              {% else %}
+                Tidak ada peralatan ditemukan
+              {% endif %}
+            </p>
+          </div>
+          <form method="get" action="{% url 'catalog:product_list' %}" class="sort-form">
+            {% for slug in selected_cats %}<input type="hidden" name="cat" value="{{ slug }}">{% endfor %}
+            {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+            {% if only_available %}<input type="hidden" name="tersedia" value="1">{% endif %}
+            {% if schedule.start %}<input type="hidden" name="tgl" value="{{ schedule.start|date:'Y-m-d' }}">{% endif %}
+            {% if schedule.duration %}<input type="hidden" name="durasi" value="{{ schedule.duration }}">{% endif %}
+            <label for="sortSelect">Urutkan</label>
+            <select name="sort" id="sortSelect" class="auto-submit">
+              {% for key, label in sort_options %}
+                <option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+
+        {% if schedule.start and schedule.duration %}
+        <div class="schedule-info">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Jadwal sewa: <strong>{{ schedule.start|date:"D, d M Y" }}</strong> selama <strong>{{ schedule.duration }} hari</strong>
+          · Maks. pengembalian <strong>{{ schedule.return_date|date:"D, d M Y" }}</strong>
+        </div>
+        {% endif %}
+
+        {% if has_filters %}
+        <div class="active-filters">
+          {% if query %}<span class="chip">Cari: “{{ query }}”</span>{% endif %}
+          {% for c in selected_cat_objs %}<span class="chip">{{ c.name }}</span>{% endfor %}
+          {% if only_available %}<span class="chip">Tersedia</span>{% endif %}
+          <a href="{% url 'catalog:product_list' %}{% if schedule_qs %}?{{ schedule_qs }}{% endif %}" class="chip chip-clear">Hapus semua filter ✕</a>
+        </div>
+        {% endif %}
+
+        {% if products %}
+        <div class="product-grid catalog-grid">
+          {% for product in products %}
+            {% include "catalog/_product_card.html" %}
+          {% endfor %}
+        </div>
+
+        {% if paginator.num_pages > 1 %}
+        <nav class="pagination" aria-label="Navigasi halaman">
+          {% if page_obj.has_previous %}
+            <a class="page-btn" href="?{% if base_querystring %}{{ base_querystring }}&{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Sebelumnya">&lsaquo;</a>
+          {% else %}
+            <span class="page-btn disabled">&lsaquo;</span>
+          {% endif %}
+          {% for num in page_range %}
+            {% if num == paginator.ELLIPSIS %}
+              <span class="page-btn dots">…</span>
+            {% elif num == page_obj.number %}
+              <span class="page-btn active" aria-current="page">{{ num }}</span>
+            {% else %}
+              <a class="page-btn" href="?{% if base_querystring %}{{ base_querystring }}&{% endif %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <a class="page-btn" href="?{% if base_querystring %}{{ base_querystring }}&{% endif %}page={{ page_obj.next_page_number }}" aria-label="Berikutnya">&rsaquo;</a>
+          {% else %}
+            <span class="page-btn disabled">&rsaquo;</span>
+          {% endif %}
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="catalog-empty">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 20 7-12 4 6 3-4 4 10z"/><circle cx="17" cy="5" r="2"/></svg>
+          <h5>Peralatan tidak ditemukan</h5>
+          <p>Coba kata kunci lain atau hapus beberapa filter kategori.</p>
+          <a href="{% url 'catalog:product_list' %}" class="btn-brand btn-sm">Lihat Semua Peralatan</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% include "partials/footer.html" %}
+  {% include "partials/scripts.html" %}
+  <script src="{% static 'assets/js/catalog.js' %}"></script>
+</body>
+</html>

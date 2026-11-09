@@ -1,0 +1,73 @@
+{% extends "rentals/_base.html" %}
+{% load static %}
+
+{% block title %}Kelola Pesanan Sewa — TrailGear Rent{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="rt-section">
+  <div class="container">
+
+    <div class="rt-head">
+      <div>
+        <h1 class="rt-title">Kelola Pesanan Sewa</h1>
+        <p class="rt-sub">Konfirmasi pembayaran, serah terima alat, dan proses pengembalian.</p>
+      </div>
+      <div class="page-head-actions">
+        <a href="{% url 'accounts:cashier_dashboard' %}" class="rt-btn ghost">Dashboard Kasir</a>
+        <a href="{% url 'accounts:admin_dashboard' %}" class="rt-btn ghost">Dashboard Admin</a>
+      </div>
+    </div>
+
+    <div class="kpi-grid" style="margin-bottom:22px">
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-label">Menunggu Pembayaran</span></div>
+        <div class="kpi-value">{{ stats.pending_payment }}</div>
+        <div class="kpi-meta">Perlu konfirmasi kasir</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-label">Sedang Berjalan</span></div>
+        <div class="kpi-value">{{ stats.active_rentals }}</div>
+        <div class="kpi-meta">Alat sudah diambil pelanggan</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-label">Ambil Hari Ini</span></div>
+        <div class="kpi-value">{{ stats.pickup_today }}</div>
+        <div class="kpi-meta">Jadwal serah terima</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-label">Kembali Hari Ini</span></div>
+        <div class="kpi-value">{{ stats.return_today }}</div>
+        <div class="kpi-meta">Jadwal pengembalian</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Daftar Pesanan</div>
+          <div class="panel-sub">{{ orders|length }} pesanan ditampilkan</div>
+        </div>
+        <div class="toolbar">
+          <form method="get" class="sort-form">
+            <label for="statusFilter">Status</label>
+            <select id="statusFilter" name="status" onchange="this.form.submit()">
+              <option value="">Aktif / perlu tindakan</option>
+              {% for value, label in statuses %}
+                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+      </div>
+      <div class="panel-body">
+        {% include "rentals/_staff_orders_table.html" with open_orders=orders %}
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}

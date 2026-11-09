@@ -1,0 +1,166 @@
+{% extends "rentals/_base.html" %}
+{% load static %}
+
+{% block title %}Checkout Sewa — TrailGear Rent{% endblock %}
+
+{% block content %}
+<main class="rt-section">
+  <div class="container">
+
+    <div class="rt-head">
+      <div>
+        <h1 class="rt-title">Data Penyewa</h1>
+        <p class="rt-sub">Isi data sesuai KTP asli fisik. KTP asli wajib dibawa sebagai jaminan saat serah terima alat.</p>
+      </div>
+      <div class="rt-steps">
+        <span>1. Keranjang</span>
+        <span class="sep">›</span>
+        <span class="on">2. Data Penyewa</span>
+        <span class="sep">›</span>
+        <span>3. Nota Booking</span>
+      </div>
+    </div>
+
+    {% if cart_problems %}
+      <div class="rt-alert error">
+        {% for problem in cart_problems %}{{ problem }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        <br><a href="{% url 'rentals:cart_detail' %}" style="font-weight:800;text-decoration:underline">Kembali ke keranjang</a>
+      </div>
+    {% endif %}
+
+    <div class="rt-grid">
+
+      <!-- ===== Form ===== -->
+      <form class="rt-card" method="post" action="{% url 'rentals:checkout' %}" id="checkoutForm" novalidate>
+        {% csrf_token %}
+        <div class="rt-card-head">
+          <span class="rt-card-title">Identitas KTP, Jadwal &amp; Pembayaran</span>
+          <span class="rt-sub" style="font-size:12px;margin:0">* wajib diisi</span>
+        </div>
+        <div class="rt-card-body">
+          <div class="rt-form-grid">
+
+            <div class="rt-field full {% if form.full_name.errors %}has-error{% endif %}">
+              <label for="id_full_name">Nama Lengkap (Sesuai KTP) <span class="req">*</span></label>
+              <input type="text" id="id_full_name" name="full_name" maxlength="150"
+                     value="{{ form.full_name.value|default:'' }}" placeholder="Nama sesuai KTP asli" required>
+              {% for error in form.full_name.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="rt-field {% if form.phone_number.errors %}has-error{% endif %}">
+              <label for="id_phone_number">No. WhatsApp Aktif <span class="req">*</span></label>
+              <input type="tel" id="id_phone_number" name="phone_number" maxlength="30"
+                     value="{{ form.phone_number.value|default:'' }}" placeholder="08xxxxxxxxxx" required>
+              {% for error in form.phone_number.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="rt-field {% if form.id_card_type.errors %}has-error{% endif %}">
+              <label for="id_id_card_type">Jenis Identitas <span class="req">*</span></label>
+              <select id="id_id_card_type" name="id_card_type" required>
+                {% for value, label in form.fields.id_card_type.choices %}
+                  <option value="{{ value }}" {% if form.id_card_type.value == value or forloop.first %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              {% for error in form.id_card_type.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="rt-field full {% if form.id_card_number.errors %}has-error{% endif %}">
+              <label for="id_id_card_number">Nomor Identitas (NIK KTP 16 Digit) <span class="req">*</span></label>
+              <input type="text" id="id_id_card_number" name="id_card_number"
+                     inputmode="numeric" maxlength="16" pattern="\d{16}" autocomplete="off"
+                     value="{{ form.id_card_number.value|default:'' }}" placeholder="16 digit NIK KTP" required>
+              {% for error in form.id_card_number.errors %}<span class="err">{{ error }}</span>{% endfor %}
+              <span class="hint">Wajib berupa angka 16 digit sesuai NIK KTP Indonesia. KTP asli fisik wajib dibawa saat pengambilan alat.</span>
+            </div>
+
+            <div class="rt-field {% if form.pickup_plan_date.errors %}has-error{% endif %}">
+              <label for="id_pickup_plan_date">Tanggal Ambil <span class="req">*</span></label>
+              <input type="date" id="id_pickup_plan_date" name="pickup_plan_date"
+                     value="{{ form.pickup_plan_date.value|date:'Y-m-d'|default:form.pickup_plan_date.value }}" min="{% now 'Y-m-d' %}" required>
+              {% for error in form.pickup_plan_date.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="rt-field {% if form.return_plan_date.errors %}has-error{% endif %}">
+              <label for="id_return_plan_date">Rencana Kembali <span class="req">*</span></label>
+              <input type="date" id="id_return_plan_date" name="return_plan_date"
+                     value="{{ form.return_plan_date.value|date:'Y-m-d'|default:form.return_plan_date.value }}" min="{% now 'Y-m-d' %}" required>
+              {% for error in form.return_plan_date.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="rt-field full {% if form.payment_method.errors %}has-error{% endif %}">
+              <label for="id_payment_method">Metode Pembayaran <span class="req">*</span></label>
+              <select id="id_payment_method" name="payment_method" required>
+                {% for value, label in form.fields.payment_method.choices %}
+                  <option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              {% for error in form.payment_method.errors %}<span class="err">{{ error }}</span>{% endfor %}
+              <span class="hint">Pilih Transfer Bank (BCA / Mandiri / BNI), QRIS, atau Tunai di Kasir (COD).</span>
+            </div>
+
+            <div class="rt-field full {% if form.notes.errors %}has-error{% endif %}">
+              <label for="id_notes">Catatan Tambahan</label>
+              <textarea id="id_notes" name="notes" rows="3" maxlength="1000"
+                        placeholder="Contoh: ambil jam 15.00, butuh tas tambahan">{{ form.notes.value|default:'' }}</textarea>
+              {% for error in form.notes.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="rt-alert error" style="margin-top:16px">{{ form.non_field_errors.0 }}</div>
+          {% endif %}
+
+          <div class="rt-info">
+            Pesanan akan berstatus <strong>Menunggu Pembayaran</strong>. Stok baru berkurang
+            setelah kasir mengonfirmasi pesanan ini.
+          </div>
+        </div>
+      </form>
+
+      <!-- ===== Ringkasan pesanan ===== -->
+      <aside class="rt-summary">
+        <div class="rt-card">
+          <div class="rt-card-head"><span class="rt-card-title">Pesanan Kamu</span></div>
+          <div class="rt-card-body">
+            {% for item in items %}
+              <div class="rt-sum-line" style="align-items:flex-start">
+                <span>
+                  {{ item.product.name }}<br>
+                  <small style="font-size:12px">{{ item.quantity }} &times; {{ item.duration_days }} hari
+                    · {{ item.start_date|date:"d M" }}–{{ item.return_date|date:"d M Y" }}</small>
+                </span>
+                <strong style="white-space:nowrap">{{ item.formatted_subtotal }}</strong>
+              </div>
+            {% endfor %}
+
+            <div class="rt-sum-line" style="border-top:1px dashed var(--border);margin-top:8px;padding-top:12px">
+              <span>Total biaya sewa</span>
+              <strong>{{ cart.formatted_total_rental_fee }}</strong>
+            </div>
+            <div class="rt-sum-line">
+              <span>Jaminan sewa</span>
+              <strong>KTP Asli Fisik</strong>
+            </div>
+            <div class="rt-sum-line total">
+              <span>Total bayar</span>
+              <strong>{{ cart.formatted_grand_total }}</strong>
+            </div>
+
+            <div class="rt-actions">
+              <button type="submit" form="checkoutForm" class="rt-btn primary block" {% if cart_problems %}disabled{% endif %}>
+                Buat Pesanan
+              </button>
+              <a href="{% url 'rentals:cart_detail' %}" class="rt-btn ghost block">Kembali ke Keranjang</a>
+            </div>
+            <p class="rt-sub" style="font-size:12px;margin-top:14px">
+              Tanpa uang deposit. Pembayaran dilakukan via transfer/QRIS atau tunai di kasir toko saat pengambilan alat.
+            </p>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</main>
+{% endblock %}

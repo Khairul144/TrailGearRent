@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Halaman Tidak Dapat Diakses — TrailGear Rent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}">
+</head>
+<body id="top">
+  <main class="auth-main">
+    <div class="auth-card">
+      <span class="auth-pill">403</span>
+      <h1 class="auth-title">Halaman tidak dapat diakses</h1>
+
+      <div class="auth-msg show error" id="authMsg">
+        Maaf, halaman ini tidak tersedia untuk akun Anda. Silakan kembali ke beranda
+        atau hubungi admin jika menurut Anda ini sebuah kekeliruan.
+      </div>
+
+      <div class="form-group">
+        <a class="btn-auth" href="{% url 'home' %}">Kembali ke beranda</a>
+      </div>
+      <p class="auth-switch">
+        Butuh akses? <a href="{% url 'accounts:settings' %}">Lihat pengaturan akun</a> atau hubungi admin.
+      </p>
+    </div>
+  </main>
+</body>
+</html>

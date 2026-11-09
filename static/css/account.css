@@ -1,0 +1,531 @@
+/* ============================================================
+   TrailGear — satu file untuk area akun & member.
+
+   Sebelumnya komponen yang sama tersebar di tiga file
+   (assets/css/account.css, css/member.css, accounts/server.css)
+   plus dua blok <style> inline. Semua sudah digabung di sini.
+
+   Urutan pemuatan di template:
+     style.css  -> auth.css -> account.css -> (dashboard.css)
+
+   Daftar isi:
+     1. Menu akun di header (dropdown)
+     2. Pesan & error dari Django
+     3. Layout dashboard/member (sidebar, kartu, tabel, badge)
+     4. Form pengaturan & tombol
+     5. Helper tambahan (baris info, aktivitas, empty state)
+   ============================================================ */
+
+/* Pastikan atribut hidden selalu menang atas display CSS */
+[hidden] { display: none !important; }
+
+/* ============================================================
+   1. MENU AKUN DI HEADER
+   ============================================================ */
+
+.account-menu { position: relative; }
+
+.account-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color .2s;
+}
+.header-solid .account-toggle { color: var(--black); }
+.account-toggle:hover { color: var(--brand); }
+.header-solid .account-toggle:hover { color: var(--brand-dark); }
+
+.avatar-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--black);
+  font-size: 15px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+.avatar-circle.brand { background: var(--brand-darken, #16a34a); color: #fff; }
+
+.account-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-toggle .chev { transition: transform .2s; }
+
+/* Chip role di samping nama (Admin / Cashier) — satu-satunya definisi */
+.role-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--black);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.header-solid .role-chip { background: rgba(34, 197, 94, .16); }
+
+/* --- Dropdown -------------------------------------------------
+   Satu mekanisme buka/tutup: opacity + visibility + transform.
+   Terbuka saat :hover (desktop) ATAU .open (klik di mobile).
+   JANGAN menambahkan display:none/block di tempat lain.
+   ------------------------------------------------------------- */
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  min-width: 200px;
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .12);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .18s ease, transform .18s ease, visibility .18s;
+  z-index: 1200;
+}
+
+.account-menu:hover .account-dropdown,
+.account-menu.open .account-dropdown {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.account-menu:hover .account-toggle .chev,
+.account-menu.open .account-toggle .chev { transform: rotate(180deg); }
+
+/* Jembatan 14px supaya pointer tidak "keluar" saat turun ke dropdown */
+.account-menu::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 100%;
+  height: 14px;
+}
+
+/* Satu aturan untuk <a> maupun <button> (logout Django wajib POST) */
+.account-dropdown li a,
+.account-dropdown li button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 20px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.account-dropdown li a:hover,
+.account-dropdown li button:hover { background: var(--neutral-100); }
+.account-dropdown li a svg,
+.account-dropdown li button svg { color: var(--neutral-400); flex: 0 0 auto; }
+
+.account-dropdown li form { margin: 0; padding: 0; }
+
+.account-dropdown .divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+.account-dropdown .logout,
+.account-dropdown .logout svg { color: #c62828; }
+
+/* ============================================================
+   2. PESAN & ERROR DARI DJANGO
+   ============================================================ */
+
+.page-msg {
+  max-width: 1180px;
+  margin: 18px auto 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border: 1px solid transparent;
+}
+.page-msg.success { background: #e7f7e9; color: #1b5e20; border-color: #a5d6a7; }
+.page-msg.error   { background: #fdecea; color: #b71c1c; border-color: #ef9a9a; }
+.page-msg.info    { background: #e8f0fe; color: #1a237e; border-color: #90caf9; }
+.page-msg.warning { background: #fff8e1; color: #e65100; border-color: #ffe082; }
+.page-msg .msg-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0 4px;
+  transition: opacity .15s ease;
+}
+.page-msg .msg-close:hover { opacity: 1; }
+
+.field-error { color: #c62828; font-size: 12px; margin-top: 4px; }
+.form-row input.input-error,
+.form-row textarea.input-error { border-color: #c62828; }
+
+/* ============================================================
+   3. LAYOUT DASHBOARD / MEMBER
+   ============================================================ */
+
+.dash {
+  background: #fafafa;
+  padding: 48px 0 96px;
+  min-height: 60vh;
+}
+.dash-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.dash-side {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  position: sticky;
+  top: 24px;
+}
+.dash-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.dash-user .avatar-circle { width: 46px; height: 46px; font-size: 19px; }
+.dash-user-name {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--black);
+  line-height: 1.2;
+}
+.dash-user-mail {
+  font-size: 13px;
+  color: var(--neutral-500);
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-nav { display: flex; flex-direction: column; gap: 4px; }
+.dash-nav a,
+.dash-nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--black);
+  text-align: left;
+  cursor: pointer;
+  transition: background .2s;
+}
+.dash-nav a:hover,
+.dash-nav button:hover { background: var(--neutral-100); }
+.dash-nav a.active {
+  background: var(--brand);
+  color: var(--black);
+  font-weight: 800;
+}
+.dash-nav a.logout,
+.dash-nav button.logout { color: #c62828; }
+.dash-nav a.logout:hover,
+.dash-nav button.logout:hover { background: #fdecea; }
+.dash-nav form { margin: 0; padding: 0; }
+
+.dash-content { min-width: 0; }
+.dash-title { font-size: 30px; font-weight: 800; color: var(--black); margin-bottom: 4px; }
+.dash-sub { font-size: 15px; color: var(--neutral-500); margin-bottom: 24px; }
+
+.dash-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.dash-card + .dash-card { margin-top: 24px; }
+.dash-card h2 { font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+.dash-card .card-sub { font-size: 14px; color: var(--neutral-500); margin-bottom: 20px; }
+
+/* Tabs filter */
+.dash-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.dash-tabs button {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--black);
+  cursor: pointer;
+  transition: all .2s;
+}
+.dash-tabs button:hover { border-color: var(--neutral-400); }
+.dash-tabs button.active {
+  background: var(--brand);
+  border-color: var(--brand-darken);
+  font-weight: 800;
+}
+
+/* Tabel */
+.table-wrap { overflow-x: auto; }
+.dash-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dash-table th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--neutral-500);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.dash-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--neutral-100);
+  color: var(--black);
+  vertical-align: middle;
+}
+.dash-table tr:last-child td { border-bottom: 0; }
+.dash-table .mono { font-weight: 700; white-space: nowrap; }
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.badge.pending { background: #fff4d6; color: #8a6100; }
+.badge.active { background: #d8f4db; color: #1b5e20; }
+.badge.done { background: var(--neutral-100); color: var(--neutral-500); }
+
+.dash-table td small { color: var(--neutral-500); font-size: 12px; }
+
+/* Badge status (dipakai member maupun dashboard admin/kasir) */
+.badge.pending   { background: #fff4d6; color: #8a6100; }
+.badge.paid      { background: #d8f4db; color: #1b5e20; }
+.badge.rejected  { background: #fdecea; color: #c62828; }
+.badge.active    { background: #d8f4db; color: #1b5e20; }
+.badge.returned  { background: #e3f0ff; color: #1f5c99; }
+.badge.completed { background: var(--neutral-100); color: var(--neutral-500); }
+.badge.cancelled { background: var(--neutral-200); color: #4d4d4d; }
+.badge.role      { background: #eafbe8; color: var(--brand-dark); }
+.badge.role-admin{ background: #fff0ec; color: #b0472c; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 48px 20px; }
+.empty-state svg { color: var(--neutral-300, #d6d7d8); margin-bottom: 16px; }
+.empty-state h3 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.empty-state p { font-size: 14px; color: var(--neutral-500); margin-bottom: 20px; }
+
+/* ============================================================
+   4. FORM PENGATURAN & TOMBOL
+   ============================================================ */
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.settings-grid .full { grid-column: 1 / -1; }
+.form-row { display: flex; flex-direction: column; gap: 6px; }
+.form-row label { font-size: 14px; font-weight: 700; color: var(--black); }
+.form-row input,
+.form-row textarea,
+.form-row select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--black);
+  background: var(--white);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.form-row textarea { resize: vertical; min-height: 90px; }
+.form-row input:focus,
+.form-row textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(112, 244, 109, .15);
+}
+.form-row input[readonly] { background: var(--neutral-100); color: var(--neutral-500); }
+.settings-actions { margin-top: 20px; display: flex; gap: 12px; }
+
+.btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 28px;
+  background: var(--brand);
+  border: 1px solid var(--brand-darken);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--black);
+  cursor: pointer;
+  transition: filter .2s;
+}
+.btn-save:hover { filter: brightness(.95); }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 13px 24px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--black);
+  cursor: pointer;
+}
+.btn-ghost:hover { background: var(--neutral-100); }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 24px;
+  text-align: center;
+  text-decoration: none;
+  background: transparent;
+  border: 1.5px solid var(--black, #101010);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black, #101010);
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--neutral-100); }
+
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1b5e20;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+  opacity: 0;
+  visibility: hidden;
+  transition: all .3s ease;
+  z-index: 2000;
+}
+.toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+/* ============================================================
+   5. HELPER: BARIS INFO, AKTIVITAS, MUTED
+   ============================================================ */
+
+.dash-list { display: grid; gap: 10px; margin-bottom: 22px; }
+.dash-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 8px;
+  font-size: 15px;
+}
+.dash-label { color: var(--neutral-500); }
+.dash-value { font-weight: 600; text-align: right; word-break: break-word; }
+.dash-muted { color: var(--neutral-400, #9ca3af); font-weight: 400; }
+
+.dash-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.dash-actions form { margin: 0; }
+
+.dash-heading { font-size: 17px; margin: 26px 0 12px; }
+.dash-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dash-events li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.dash-event-type { font-weight: 600; }
+.dash-event-meta { color: var(--neutral-500); font-size: 13px; }
+
+/* Halaman member (login/register/password) */
+.member-card { max-width: 640px; }
+.member-muted { color: var(--neutral-500); margin-bottom: 8px; }
+.member-heading { font-size: 17px; margin: 26px 0 12px; }
+.member-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.member-actions form { margin: 0; }
+
+@media (max-width: 991px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-side { position: static; }
+  .settings-grid { grid-template-columns: 1fr; }
+}

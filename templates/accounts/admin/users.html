@@ -1,0 +1,145 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Users — Admin TrailGear{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block page_sub %}Kelola seluruh akun customer, kasir, dan admin.{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/accounts/user/add/" class="btn-xs primary">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    Tambah User
+  </a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini"><div class="k">Total</div><div class="v">{{ total_users }}</div></div>
+  <div class="adm-mini"><div class="k">Customer</div><div class="v">{{ total_customer }}</div></div>
+  <div class="adm-mini"><div class="k">Kasir</div><div class="v">{{ total_cashier }}</div></div>
+  <div class="adm-mini"><div class="k">Admin</div><div class="v">{{ total_admin }}</div></div>
+</div>
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Daftar User</div>
+      <div class="panel-sub">{{ page_obj.paginator.count }} akun cocok dengan filter</div>
+    </div>
+  </div>
+
+  <form class="adm-filters" method="get" action="{% url 'accounts:admin_users' %}">
+    <div class="adm-field grow">
+      <label for="fq">Cari</label>
+      <input type="text" id="fq" name="q" value="{{ query }}" placeholder="username, nama, atau email">
+    </div>
+    <div class="adm-field">
+      <label for="frole">Role</label>
+      <select id="frole" name="role">
+        <option value="">Semua role</option>
+        <option value="Admin" {% if role_filter == 'Admin' %}selected{% endif %}>Admin</option>
+        <option value="Cashier" {% if role_filter == 'Cashier' %}selected{% endif %}>Kasir</option>
+        <option value="Customer" {% if role_filter == 'Customer' %}selected{% endif %}>Customer</option>
+      </select>
+    </div>
+    <div class="adm-field">
+      <label for="fstatus">Status</label>
+      <select id="fstatus" name="status">
+        <option value="">Semua status</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Aktif</option>
+        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Nonaktif</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-xs primary">Terapkan</button>
+    {% if query or role_filter or status_filter %}
+      <a href="{% url 'accounts:admin_users' %}" class="adm-reset">Reset</a>
+    {% endif %}
+  </form>
+
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Bergabung</th>
+            <th>Login Terakhir</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr data-search="{{ u.username|lower }} {{ u.display_name|lower }} {{ u.email|lower }}">
+            <td>
+              <div class="user-cell">
+                <span class="avatar-circle {% if u.role_name != 'Customer' %}brand{% endif %}">{{ u.username|first|upper }}</span>
+                <div>
+                  <div class="row-strong">{{ u.display_name }}</div>
+                  <small>@{{ u.username }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ u.email|default:"—" }}</td>
+            <td><span class="badge role{% if u.role_name == 'Admin' %} role-admin{% endif %}">{{ u.role_name }}</span></td>
+            <td>
+              {% if u.is_active %}<span class="badge active">Aktif</span>
+              {% else %}<span class="badge rejected">Nonaktif</span>{% endif %}
+            </td>
+            <td class="adm-nowrap">{{ u.date_joined|date:"d M Y" }}</td>
+            <td class="adm-nowrap">{{ u.last_login|date:"d M Y H:i"|default:"—" }}</td>
+            <td>
+              <div class="table-actions">
+                <a class="btn-xs" href="/admin/accounts/user/{{ u.pk }}/change/">Kelola</a>
+                {% if u.pk != user.pk %}
+                <form method="post" action="{% url 'accounts:admin_user_toggle' u.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" class="btn-xs {% if u.is_active %}danger{% endif %}">
+                    {% if u.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">Tidak ada user yang cocok dengan filter.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="adm-pager">
+    <span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+    <div class="adm-pager-links">
+      {% if page_obj.has_previous %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      {% else %}
+        <span class="adm-page disabled">&lsaquo;</span>
+      {% endif %}
+      {% for num in page_range %}
+        {% if num == page_obj.number %}
+          <span class="adm-page active">{{ num }}</span>
+        {% elif num == "…" %}
+          <span class="adm-page dots">…</span>
+        {% else %}
+          <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      {% else %}
+        <span class="adm-page disabled">&rsaquo;</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Pembayaran — Admin TrailGear{% endblock %}
+{% block page_title %}Pembayaran{% endblock %}
+{% block page_sub %}Pesanan yang belum dibayar. Konfirmasi dilakukan setelah dana diterima.{% endblock %}
+
+{% block admin_content %}
+
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini"><div class="k">Menunggu Verifikasi</div><div class="v">{{ pending_count }}</div></div>
+  <div class="adm-mini"><div class="k">Total Tagihan</div><div class="v small">{{ pending_total_fmt }}</div></div>
+  <div class="adm-mini"><div class="k">Jaminan Sewa</div><div class="v small">KTP Asli Fisik</div></div>
+</div>
+
+{% if pending_count %}
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Menunggu Pembayaran</div>
+      <div class="panel-sub">Urut dari pesanan paling lama</div>
+    </div>
+    <a href="{% url 'accounts:admin_rentals' %}?status=MENUNGGU_PEMBAYARAN" class="panel-link">
+      Lihat sebagai daftar pesanan
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+  <div class="panel-body">
+    {% include "rentals/_staff_orders_table.html" %}
+  </div>
+</div>
+{% else %}
+<div class="panel" style="margin-top:0">
+  <div class="empty-state">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+    <h3>Tidak ada pembayaran tertunda</h3>
+    <p>Semua pesanan sudah dikonfirmasi atau dibatalkan.</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="rt-alert info" style="margin-top:20px">
+  Konfirmasi pembayaran akan <strong>mengurangi stok</strong> alat dan mencatat mutasi
+  <code>RENTED</code> di log inventaris. Membatalkan pesanan yang sudah dikonfirmasi
+  mengembalikan stok secara otomatis.
+</div>
+
+{% endblock %}

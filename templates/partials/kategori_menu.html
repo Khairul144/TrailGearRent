@@ -1,0 +1,5 @@
+{% for c in nav_categories %}
+<li><a href="{% url 'catalog:product_list' %}?cat={{ c.slug|urlencode }}">{{ c.name }}</a></li>
+{% empty %}
+<li><a href="{% url 'catalog:product_list' %}">Semua Peralatan</a></li>
+{% endfor %}

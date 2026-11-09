@@ -1,0 +1,7 @@
+﻿DROP ROLE IF EXISTS uji_lemah;
+NOTICE:  role ┬½ uji_lemah ┬╗ tidak ada, melompati
+DROP ROLE
+CREATE ROLE uji_lemah LOGIN PASSWORD '<REDACTED_WEAK_PASSWORD>';
+ERROR:  password is too short
+DETAIL:  password must be at least "passwordcheck.min_password_length" (8) bytes long
+

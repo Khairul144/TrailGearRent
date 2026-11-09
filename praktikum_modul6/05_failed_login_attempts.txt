@@ -1,0 +1,10 @@
+﻿ALTER ROLE uji_kuat FAILED_LOGIN_ATTEMPTS 3;
+ERROR:  opsi role ┬½ failed_login_attempts ┬╗ tidak dikenali
+LINE 1: ALTER ROLE uji_kuat FAILED_LOGIN_ATTEMPTS 3;
+                            ^
+=== CATATAN PENJELASAN ===
+Perintah 'ALTER ROLE uji_kuat FAILED_LOGIN_ATTEMPTS 3;' gagal dengan syntax error karena klausa FAILED_LOGIN_ATTEMPTS dan PASSWORD_LOCK_TIME adalah sintaks milik MySQL/Oracle dan TIDAK tersedia secara bawaan pada tata bahasa SQL PostgreSQL.
+Pada PostgreSQL:
+1. Modul contrib 'auth_delay' hanya memberikan jeda waktu (delay) saat autentikasi gagal untuk memperlambat brute-force, tetapi tidak mengunci akun secara otomatis.
+2. Mekanisme Account Lockout (pencatatan jumlah gagal login berturut-turut dan penguncian akun sementara/permanen) harus diimplementasikan pada lapisan aplikasi (Application Layer), misalnya melalui kolom failed_login_attempts dan locked_until pada model User di Django.
+

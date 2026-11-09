@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrailGear Rent — Sewa Tenda, Carrier &amp; Gear Outdoor</title>
+  <meta name="description" content="Sewa gear outdoor: tenda, carrier, dan perlengkapan camping. Stok real-time, praktis & cepat, layanan khusus JADETABEK.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}">
+  <link rel="stylesheet" href="{% static 'css/catalog.css' %}">
+</head>
+<body id="top">
+
+  {% include "partials/header.html" %}
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+      {% if messages %}
+      <div class="hero-messages" style="margin-bottom: 24px; max-width: 680px;">
+        {% for message in messages %}
+          <div class="page-msg {{ message.tags }}" role="alert">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              <span>{{ message }}</span>
+            </div>
+            <button type="button" class="msg-close" onclick="this.parentElement.remove()" aria-label="Tutup">&times;</button>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <p class="hero-eyebrow">Siap Menjelajah, Tanpa Ribet.</p>
+      <h1 class="hero-title">Sewa Gear Outdoor<br class="br-lg">Kini Lebih Mudah!</h1>
+      <ul class="list-ticks">
+        <li>Stok Real-Time &amp; Lengkap</li>
+        <li>Praktis &amp; Cepat</li>
+        <li>Layanan Khusus Cilacap-Banyumas</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== SEARCH BAR ===== -->
+  <section class="search-section">
+    <div class="container">
+      {% include "partials/schedule_form.html" with show_search=True %}
+    </div>
+  </section>
+
+  <!-- ===== BRANDS ===== -->
+  <section class="section-brands">
+    <div class="container">
+      <h2 class="section-title">Pilihan Brand</h2>
+      <p class="section-sub">Dipilih dari merek terbaik untuk pengalaman terbaik.</p>
+    </div>
+    <div class="container brand-slider-wrap">
+      <div class="brand-slider" id="brandSlider">
+        <!-- Set 1 -->
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_eMp11fyNX6EkaIPJWXre.jpg' %}" alt="Brand 1"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_UiH8c05Htb1tJ1APdoU0.jpg' %}" alt="Brand 2"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_68Dtff8Pk8pPC3ChVKb6.jpg' %}" alt="Brand 3"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_AefumENqKe7gfwPr72ma.jpg' %}" alt="Brand 4"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_hJ5YFPCUIAGXoKBlU66k.jpg' %}" alt="Brand 5"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_r9MEiBEAajJYitlmOJrK.jpg' %}" alt="Brand 6"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_6F0I3chKU6Gw6BpzsbEH.jpg' %}" alt="Brand 7"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_ypI3GUgHKlUTYvoJaLvw.jpg' %}" alt="Brand 8"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_jZ8EpmrI61g8O7AeFX90.jpg' %}" alt="Brand 9"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_HxkeeT11i4EPsUwIVDaJ.jpg' %}" alt="Brand 10"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_nUaUjco40sCZQ8ncEcxm.jpg' %}" alt="Brand 11"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_EBFw4gAuLJzpfrWn8uch.jpg' %}" alt="Brand 12"></div>
+        <!-- Set 2 (Duplikasi untuk loop berjalan mulus ke kiri tanpa henti) -->
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_eMp11fyNX6EkaIPJWXre.jpg' %}" alt="Brand 1"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_UiH8c05Htb1tJ1APdoU0.jpg' %}" alt="Brand 2"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_68Dtff8Pk8pPC3ChVKb6.jpg' %}" alt="Brand 3"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_AefumENqKe7gfwPr72ma.jpg' %}" alt="Brand 4"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_hJ5YFPCUIAGXoKBlU66k.jpg' %}" alt="Brand 5"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_r9MEiBEAajJYitlmOJrK.jpg' %}" alt="Brand 6"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_6F0I3chKU6Gw6BpzsbEH.jpg' %}" alt="Brand 7"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_ypI3GUgHKlUTYvoJaLvw.jpg' %}" alt="Brand 8"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_jZ8EpmrI61g8O7AeFX90.jpg' %}" alt="Brand 9"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_HxkeeT11i4EPsUwIVDaJ.jpg' %}" alt="Brand 10"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_nUaUjco40sCZQ8ncEcxm.jpg' %}" alt="Brand 11"></div>
+        <div class="brand-card"><img src="{% static 'assets/img/brand/brand_EBFw4gAuLJzpfrWn8uch.jpg' %}" alt="Brand 12"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRODUCTS ===== -->
+  <section class="section-products">
+    <div class="container">
+      <div class="row-head">
+        <div>
+          <h2 class="section-title">Pilihan Terbaik Minggu Ini!</h2>
+          <p class="section-sub">Gear Pilihan Pendaki, Siap Temani Petualanganmu.</p>
+        </div>
+        <a href="{% url 'catalog:product_list' %}" class="btn-brand btn-sm">Lihat Lainnya</a>
+      </div>
+      <div class="product-grid" id="featuredGrid">
+        {% for product in featured_products %}
+          {% include "catalog/_product_card.html" %}
+        {% empty %}
+          <p class="catalog-empty-inline">Belum ada produk unggulan. Jalankan <code>python manage.py seed_catalog</code>.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TESTIMONIALS ===== -->
+  <section class="section-testimonials">
+    <div class="container text-center">
+      <span class="pill">Testimoni</span>
+      <h2 class="section-title mt-8">Apa kata mereka?</h2>
+    </div>
+    <div class="container testi-slider-wrap">
+      <div class="testi-slider" id="testiSlider"><!-- diisi via JS --></div>
+    </div>
+  </section>
+
+  {% include "partials/footer.html" %}
+
+  {% include "partials/scripts.html" %}
+</body>
+</html>

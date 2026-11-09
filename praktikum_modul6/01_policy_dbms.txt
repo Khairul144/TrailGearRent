@@ -1,0 +1,19 @@
+﻿=== SEBELUM PERUBAHAN postgresql.conf ===
+SHOW shared_preload_libraries;
+ shared_preload_libraries 
+--------------------------
+ 
+(1 row)
+
+SELECT name FROM pg_available_extensions WHERE name IN ('passwordcheck', 'auth_delay');
+ name 
+------
+(0 rows)
+
+=== SESUDAH PERUBAHAN postgresql.conf & RESTART SERVER ===
+SHOW shared_preload_libraries;
+ shared_preload_libraries 
+--------------------------
+ passwordcheck
+(1 row)
+

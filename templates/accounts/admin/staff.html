@@ -1,0 +1,78 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Staff & Kasir — Admin TrailGear{% endblock %}
+{% block page_title %}Staff / Kasir{% endblock %}
+{% block page_sub %}Akun operasional yang memproses pesanan dan serah terima alat.{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/accounts/user/add/" class="btn-xs primary">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    Tambah Staff
+  </a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini"><div class="k">Total Staff</div><div class="v">{{ total_staff }}</div></div>
+  <div class="adm-mini"><div class="k">Aktif</div><div class="v">{{ active_staff }}</div></div>
+  <div class="adm-mini"><div class="k">Nonaktif</div><div class="v">{{ inactive_staff }}</div></div>
+</div>
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Akun Staff</div>
+      <div class="panel-sub">Kasir &amp; admin yang punya akses dashboard</div>
+    </div>
+    <div class="toolbar">
+      <label class="search-mini">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="tableSearch" placeholder="Cari staff...">
+      </label>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Staff</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Pesanan Selesai</th>
+            <th>Login Terakhir</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in staff_rows %}
+          <tr data-search="{{ s.username|lower }} {{ s.display_name|lower }} {{ s.email|lower }}">
+            <td>
+              <div class="user-cell">
+                <span class="avatar-circle brand">{{ s.username|first|upper }}</span>
+                <div>
+                  <div class="row-strong">{{ s.display_name }}</div>
+                  <small>@{{ s.username }}</small>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge role{% if s.role_name == 'Admin' %} role-admin{% endif %}">{{ s.role_name }}</span></td>
+            <td>{{ s.email|default:"—" }}</td>
+            <td>{% if s.is_active %}<span class="badge active">Aktif</span>{% else %}<span class="badge rejected">Nonaktif</span>{% endif %}</td>
+            <td class="mono">{{ s.order_count }}</td>
+            <td class="adm-nowrap">{{ s.last_login|date:"d M Y H:i"|default:"—" }}</td>
+            <td><a class="btn-xs" href="/admin/accounts/user/{{ s.pk }}/change/">Kelola</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">Belum ada akun staff. Tambahkan lewat tombol di atas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

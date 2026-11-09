@@ -1,0 +1,18 @@
+﻿=== 4.1 SET MASA BERLAKU KEDALUWARSA (2026-01-01) ===
+ALTER ROLE uji_kuat VALID UNTIL '2026-01-01';
+ALTER ROLE
+
+=== 4.2 UJI LOGIN DENGAN PASSWORD BENAR SAAT EXPIRED ===
+psql: error: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password gagal diotentikasi untuk pengguna  ½ uji_kuat ╗
+
+=== 4.3 KEMBALIKAN MASA BERLAKU KE INFINITY ===
+ALTER ROLE uji_kuat VALID UNTIL 'infinity';
+ALTER ROLE
+
+=== 4.4 VERIFIKASI LOGIN KEMBALI BERHASIL ===
+SELECT current_user;
+ current_user 
+--------------
+ uji_kuat
+(1 row)
+

@@ -1,0 +1,24 @@
+{% load static %}
+  <script src="{% static 'assets/js/main.js' %}"></script>
+  <script src="{% static 'assets/js/cart-add.js' %}"></script>
+  <script>
+    // Dropdown akun: hover di desktop, klik di mobile
+    (function () {
+      const item = document.getElementById("accountItem");
+      if (!item) return;
+      const toggle = document.getElementById("accountToggle");
+      const open = () => { item.classList.add("open"); toggle.setAttribute("aria-expanded", "true"); };
+      const close = () => { item.classList.remove("open"); toggle.setAttribute("aria-expanded", "false"); };
+      item.addEventListener("mouseenter", () => { if (window.innerWidth > 991) open(); });
+      item.addEventListener("mouseleave", () => { if (window.innerWidth > 991) close(); });
+      toggle.addEventListener("click", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Desktop: CSS :hover sudah membuka; klik hanya untuk mobile/touch.
+        if (window.innerWidth <= 991) {
+          item.classList.contains("open") ? close() : open();
+        }
+      });
+      document.addEventListener("click", e => { if (!item.contains(e.target)) close(); });
+    })();
+  </script>

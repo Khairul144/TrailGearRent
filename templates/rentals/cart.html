@@ -1,0 +1,180 @@
+{% extends "rentals/_base.html" %}
+{% load static %}
+
+{% block title %}Keranjang Sewa — TrailGear Rent{% endblock %}
+
+{% block content %}
+<main class="rt-section">
+  <div class="container">
+
+    <div class="rt-head">
+      <div>
+        <h1 class="rt-title">Keranjang Sewa</h1>
+        <p class="rt-sub">Atur jadwal sewa terpusat dan periksa detail barang sebelum lanjut checkout.</p>
+      </div>
+      <div class="rt-steps">
+        <span class="on">1. Keranjang</span>
+        <span class="sep">›</span>
+        <span>2. Data Penyewa</span>
+        <span class="sep">›</span>
+        <span>3. Nota Booking</span>
+      </div>
+    </div>
+
+    {% if cart_problems %}
+      <div class="rt-alert error">
+        {% for problem in cart_problems %}{{ problem }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+      </div>
+    {% endif %}
+
+    {% if not items %}
+      <div class="rt-card">
+        <div class="rt-empty">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+            <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+          </svg>
+          <h3>Keranjang kamu masih kosong</h3>
+          <p>Pilih tenda, carrier, atau gear lain yang mau kamu sewa.</p>
+          <a href="{% url 'catalog:product_list' %}" class="rt-btn primary">Lihat Katalog Alat</a>
+        </div>
+      </div>
+    {% else %}
+
+      <!-- ===== Header Kontrol Jadwal Terpusat ===== -->
+      <form class="rt-card rt-schedule-bar" method="post" action="{% url 'rentals:update_cart_schedule' %}" id="cartScheduleForm">
+        {% csrf_token %}
+        <div class="rt-schedule-field">
+          <label for="cartStart">Tgl Ambil</label>
+          <input type="date" id="cartStart" name="tgl"
+                 min="{% now 'Y-m-d' %}"
+                 value="{% if schedule_start %}{{ schedule_start|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}"
+                 required>
+        </div>
+
+        <div class="rt-schedule-field">
+          <label for="cartDuration">Durasi</label>
+          <select id="cartDuration" name="durasi">
+            {% for d in duration_choices %}
+              <option value="{{ d }}" {% if d == schedule_duration %}selected{% endif %}>{{ d }} Hari</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="rt-schedule-return">
+          <span class="rt-schedule-label">Maks. Pengembalian</span>
+          <strong id="cartReturn">
+            {% if schedule_return %}{{ schedule_return|date:"D, d M Y" }}{% else %}—{% endif %}
+          </strong>
+          <span class="rt-schedule-sync-hint">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+            Berlaku serentak untuk seluruh alat
+          </span>
+        </div>
+
+        <div class="rt-schedule-action">
+          <button type="submit" class="rt-btn primary rt-btn-sm" id="btnSyncSchedule">Sinkronkan Jadwal</button>
+        </div>
+      </form>
+
+      <div class="rt-grid">
+
+        <!-- ===== Detail Barang ===== -->
+        <div class="rt-card">
+          <div class="rt-card-head">
+            <span class="rt-card-title">Detail Barang ({{ cart.total_quantity }} unit) <span class="rt-badge-sync" title="Jadwal seluruh barang seragam mengikuti kontrol di atas">✓ Jadwal Sinkron</span></span>
+            <span class="rt-col-subtotal">Subtotal</span>
+          </div>
+
+          {% for item in items %}
+          <div class="rt-item">
+            <div class="rt-thumb" style="background-image:url('{{ item.product.get_image_url }}')" role="img" aria-label="{{ item.product.name }}"></div>
+
+            <div class="rt-item-main">
+              <div class="rt-item-cat">{{ item.product.category.name }}</div>
+              <div class="rt-item-name">
+                <a href="{% url 'catalog:product_detail' item.product.slug %}">{{ item.product.name }}</a>
+              </div>
+              <div class="rt-item-price">
+                Harga sewa {{ item.product.formatted_price }}/kuantitas/hari
+              </div>
+              <div class="rt-item-meta">
+                <span>Ambil: <strong>{{ item.start_date|date:"d M Y" }}</strong></span>
+                <span>Durasi: <strong>{{ item.duration_days }} Hari</strong></span>
+                <span>Maks. Kembali: <strong>{{ item.return_date|date:"d M Y" }}</strong></span>
+              </div>
+
+              <div class="rt-item-controls">
+                <form class="rt-qty" method="post" action="{% url 'rentals:update_cart_item' item.id %}">
+                  {% csrf_token %}
+                  <button type="button" data-qty-step="-1" aria-label="Kurangi jumlah">&minus;</button>
+                  <input type="number" name="quantity" value="{{ item.quantity }}"
+                         min="1" max="{{ item.product.available_stock }}" aria-label="Jumlah {{ item.product.name }}">
+                  <button type="button" data-qty-step="1" aria-label="Tambah jumlah">+</button>
+                </form>
+
+                <form method="post" action="{% url 'rentals:remove_from_cart' item.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="rt-link-danger">Hapus</button>
+                </form>
+              </div>
+            </div>
+
+            <div class="rt-item-right">
+              <div class="rt-item-total">
+                <span class="rt-subtotal-lbl">Subtotal</span>
+                {{ item.formatted_subtotal }}
+                <small>{{ item.product.formatted_price }} &times; {{ item.duration_days }} hari &times; {{ item.quantity }} unit</small>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+
+          <div class="rt-card-foot">
+            <a href="{% url 'catalog:product_list' %}" class="rt-add-more">+ Tambah alat lain dari katalog</a>
+          </div>
+        </div>
+
+        <!-- ===== Ringkasan Biaya ===== -->
+        <aside class="rt-summary">
+          <div class="rt-card">
+            <div class="rt-card-head"><span class="rt-card-title">Ringkasan Biaya</span></div>
+            <div class="rt-card-body">
+              <div class="rt-sum-line">
+                <span>Total Biaya Sewa ({{ cart.total_quantity }} unit)</span>
+                <strong>{{ cart.formatted_total_rental_fee }}</strong>
+              </div>
+              <div class="rt-sum-line">
+                <span>Jaminan Sewa</span>
+                <strong>KTP Asli Fisik</strong>
+              </div>
+              <div class="rt-sum-line total">
+                <span>Grand Total</span>
+                <strong>{{ cart.formatted_grand_total }}</strong>
+              </div>
+
+              <div class="rt-info">
+                <strong>Tanpa Uang Deposit:</strong> Jaminan sewa menggunakan <strong>KTP asli fisik</strong> yang wajib dibawa dan diserahkan saat pengambilan alat di toko.
+              </div>
+
+              <div class="rt-actions">
+                {% if can_checkout %}
+                  <a href="{% url 'rentals:checkout' %}" class="rt-btn primary block">Lanjut Checkout</a>
+                {% else %}
+                  <button class="rt-btn primary block" disabled>Perbaiki keranjang dulu</button>
+                {% endif %}
+                <a href="{% url 'catalog:product_list' %}" class="rt-btn ghost block">Lanjut Belanja</a>
+              </div>
+
+              <p class="rt-sub" style="font-size:12px;margin-top:14px">
+                Pengambilan &amp; pengembalian dilakukan di outlet TrailGear. Pastikan KTP asli sesuai data penyewa.
+              </p>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

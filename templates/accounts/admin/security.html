@@ -1,0 +1,100 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Keamanan — Admin TrailGear{% endblock %}
+{% block page_title %}Keamanan{% endblock %}
+{% block page_sub %}Log peristiwa autentikasi &amp; akses. Data sensitif tidak pernah dicatat.{% endblock %}
+
+{% block admin_content %}
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Log Keamanan</div>
+      <div class="panel-sub">{{ page_obj.paginator.count }} peristiwa</div>
+    </div>
+  </div>
+
+  <form class="adm-filters" method="get" action="{% url 'accounts:admin_security' %}">
+    <div class="adm-field">
+      <label for="fstatus">Status</label>
+      <select id="fstatus" name="status">
+        <option value="">Semua status</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="adm-field grow">
+      <label for="fevent">Jenis Peristiwa</label>
+      <select id="fevent" name="event">
+        <option value="">Semua peristiwa</option>
+        {% for value, label in event_choices %}
+          <option value="{{ value }}" {% if type_filter == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-xs primary">Terapkan</button>
+    {% if status_filter or type_filter %}
+      <a href="{% url 'accounts:admin_security' %}" class="adm-reset">Reset</a>
+    {% endif %}
+  </form>
+
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Peristiwa</th>
+            <th>Status</th>
+            <th>User</th>
+            <th>IP</th>
+            <th>Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in events %}
+          <tr>
+            <td class="adm-nowrap">{{ e.timestamp|date:"d M Y H:i:s" }}</td>
+            <td>
+              <div class="row-strong">{{ e.event_type }}</div>
+            </td>
+            <td>
+              {% if e.status == 'SUCCESS' %}<span class="badge active">Success</span>
+              {% elif e.status == 'BLOCKED' %}<span class="badge pending">Blocked</span>
+              {% else %}<span class="badge rejected">Failure</span>{% endif %}
+            </td>
+            <td>{{ e.user.username|default:"—" }}</td>
+            <td class="mono">{{ e.ip_address|default:"—" }}</td>
+            <td class="adm-muted">{{ e.description|default:"—"|truncatechars:80 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">Belum ada peristiwa keamanan.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="adm-pager">
+    <span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+    <div class="adm-pager-links">
+      {% if page_obj.has_previous %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      {% else %}<span class="adm-page disabled">&lsaquo;</span>{% endif %}
+      {% for num in page_range %}
+        {% if num == page_obj.number %}<span class="adm-page active">{{ num }}</span>
+        {% elif num == "…" %}<span class="adm-page dots">…</span>
+        {% else %}<a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      {% else %}<span class="adm-page disabled">&rsaquo;</span>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

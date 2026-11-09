@@ -1,0 +1,164 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Dashboard Admin — TrailGear Rent{% endblock %}
+{% block page_title %}Dashboard Admin{% endblock %}
+{% block page_sub %}Ringkasan singkat sistem. Detail tiap menu ada di halaman terpisah.{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'accounts:admin_reports' %}" class="btn-xs">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 3-4 3 3 5-7"/></svg>
+    Laporan
+  </a>
+  <a href="/admin/accounts/user/add/" class="btn-xs primary">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    Tambah Staff
+  </a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Total User</span>
+      <span class="kpi-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ total_users }}</div>
+    <div class="kpi-meta"><strong>{{ total_customer }}</strong> customer &bull; <strong>{{ total_staff }}</strong> staff</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Pesanan Berjalan</span>
+      <span class="kpi-icon info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ rental_stats.active_rentals }}</div>
+    <div class="kpi-meta">alat sedang di pelanggan</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Menunggu Pembayaran</span>
+      <span class="kpi-icon warn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ rental_stats.pending_payment }}</div>
+    <div class="kpi-meta">perlu verifikasi kasir</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Pendapatan Sewa</span>
+      <span class="kpi-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value" style="font-size:22px">{{ revenue_fmt }}</div>
+    <div class="kpi-meta">akumulasi sewa (aktif + selesai)</div>
+  </div>
+</div>
+
+<div class="adm-split" style="margin-top:24px">
+
+  <!-- Pesanan terbaru -->
+  <div class="panel" style="margin-top:0">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Pesanan Terbaru</div>
+        <div class="panel-sub">6 pesanan terakhir</div>
+      </div>
+      <a href="{% url 'accounts:admin_rentals' %}" class="panel-link">
+        Semua pesanan
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    <div class="panel-body">
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>Kode</th>
+              <th>Penyewa</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in recent_orders %}
+            <tr>
+              <td class="mono"><a href="{% url 'rentals:order_detail' order.order_code %}">{{ order.order_code }}</a></td>
+              <td>
+                {{ order.full_name }}
+                <br><small>{{ order.items_summary }}</small>
+              </td>
+              <td class="mono">{{ order.formatted_grand_total }}</td>
+              <td><span class="badge {{ order.badge_class }}">{{ order.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">Belum ada pesanan sewa.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keamanan terbaru -->
+  <div class="panel" style="margin-top:0">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Keamanan Terbaru</div>
+        <div class="panel-sub">6 peristiwa terakhir</div>
+      </div>
+      <a href="{% url 'accounts:admin_security' %}" class="panel-link">
+        Detail
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    <div class="panel-body">
+      <div class="log-list">
+        {% for e in events %}
+        <div class="log-item">
+          <span class="log-dot {% if e.status == 'SUCCESS' %}ok{% elif e.status == 'BLOCKED' %}warn{% else %}bad{% endif %}"></span>
+          <div class="log-main">
+            <div class="log-code">{{ e.get_event_type_display|default:e.event_type }}</div>
+            <div class="log-meta">{{ e.ip_address|default:"-" }}{% if e.user %} &bull; {{ e.user.username }}{% endif %}</div>
+          </div>
+          <span class="log-time">{{ e.timestamp|date:"d M H:i" }}</span>
+        </div>
+        {% empty %}
+        <div class="log-item"><div class="log-main"><div class="log-meta">Belum ada aktivitas keamanan.</div></div></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Akses cepat -->
+<div class="adm-mini-grid" style="margin-top:24px">
+  <a class="adm-mini" href="{% url 'accounts:admin_users' %}">
+    <div class="k">Kelola User</div>
+    <div class="v small">{{ total_customer }} customer &middot; {{ total_staff }} staff</div>
+  </a>
+  <a class="adm-mini" href="{% url 'accounts:admin_products' %}">
+    <div class="k">Inventaris</div>
+    <div class="v small">Cek stok &amp; barang</div>
+  </a>
+  <a class="adm-mini" href="{% url 'accounts:admin_payments' %}">
+    <div class="k">Pembayaran</div>
+    <div class="v small">{{ rental_stats.pending_payment }} menunggu verifikasi</div>
+  </a>
+  <a class="adm-mini" href="{% url 'rentals:staff_order_list' %}">
+    <div class="k">Meja Kasir</div>
+    <div class="v small">Serah terima &amp; pengembalian</div>
+  </a>
+</div>
+
+{% endblock %}

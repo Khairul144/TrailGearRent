@@ -1,0 +1,296 @@
+{% extends "rentals/_base.html" %}
+{% load static %}
+
+{% block title %}Nota {{ order.order_code }} — TrailGear Rent{% endblock %}
+
+{% block content %}
+<main class="rt-section">
+  <div class="container">
+
+    <div class="rt-head rt-no-print">
+      <div>
+        <h1 class="rt-title">Nota Booking</h1>
+        <p class="rt-sub">Simpan atau cetak nota ini. Tunjukkan bersama KTP asli fisik saat mengambil alat.</p>
+      </div>
+      <div class="rt-steps">
+        <span>1. Keranjang</span>
+        <span class="sep">›</span>
+        <span>2. Data Penyewa</span>
+        <span class="sep">›</span>
+        <span class="on">3. Nota Booking</span>
+      </div>
+    </div>
+
+    <div class="rt-receipt" id="printableReceipt">
+      <div class="rt-receipt-head">
+        <div class="rt-receipt-brand">
+          <img src="{% static 'assets/img/logo/logo_navbar_white.png' %}?v=2" alt="TrailGear Rent">
+          <div>
+            <b>TrailGear<span>Rent</span></b>
+            <small>Rental Alat Outdoor · Nota Sewa Resmi</small>
+          </div>
+        </div>
+        <div class="rt-code">
+          <small>Kode Booking</small>
+          <b>{{ order.order_code }}</b>
+        </div>
+      </div>
+
+      <div class="rt-receipt-body">
+
+        <div class="rt-status-line">
+          <span class="rt-pill {{ order.badge_class }}">{{ order.get_status_display }}</span>
+          <span class="rt-pill returned">Dibuat {{ order.created_at|date:"d M Y, H:i" }} WIB</span>
+          <span class="rt-pill returned">Jaminan: KTP Asli Fisik</span>
+        </div>
+
+        <div class="rt-meta-grid">
+          <div><div class="k">Nama Penyewa</div><div class="v">{{ order.full_name }}</div></div>
+          <div><div class="k">WhatsApp</div><div class="v">{{ order.phone_number }}</div></div>
+          <div><div class="k">Identitas (Jaminan)</div><div class="v">{{ order.get_id_card_type_display }} · {{ order.id_card_number }}</div></div>
+          <div><div class="k">Tanggal Ambil</div><div class="v">{{ order.pickup_plan_date|date:"D, d M Y" }}</div></div>
+          <div><div class="k">Rencana Kembali</div><div class="v">{{ order.return_plan_date|date:"D, d M Y" }}</div></div>
+          <div><div class="k">Jumlah Unit</div><div class="v">{{ order.total_units }} unit</div></div>
+          <div><div class="k">Metode Bayar</div><div class="v">{{ order.formatted_payment_method }}</div></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="rt-table">
+            <thead>
+              <tr>
+                <th>Alat</th>
+                <th class="num">Harga / Hari</th>
+                <th class="num">Durasi</th>
+                <th class="num">Qty</th>
+                <th class="num">Subtotal Sewa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in order.items.all %}
+              <tr>
+                <td>
+                  <div class="strong">{{ item.product.name }}</div>
+                  <small style="color:var(--neutral-500)">{{ item.product.category.name }}</small>
+                </td>
+                <td class="num">{{ item.formatted_unit_price }}</td>
+                <td class="num">{{ item.duration_days }} hari</td>
+                <td class="num">{{ item.quantity }}</td>
+                <td class="num">{{ item.formatted_subtotal }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rt-totals">
+          <div class="row"><span>Total biaya sewa</span><strong>{{ order.formatted_total_rental_fee }}</strong></div>
+          <div class="row"><span>Jaminan sewa</span><strong>KTP Asli Fisik</strong></div>
+          <div class="row grand"><span>Total dibayar</span><strong>{{ order.formatted_grand_total }}</strong></div>
+        </div>
+
+        {% if order.notes %}
+          <div class="rt-info"><strong>Catatan:</strong> {{ order.notes|linebreaksbr }}</div>
+        {% endif %}
+
+        <div class="rt-payinfo rt-no-print">
+          <h3 class="rt-payinfo-title">Informasi Pembayaran</h3>
+          <div class="rt-bank-grid">
+            {% for bank in banks %}
+            <div class="rt-bank{% if bank.method == order.payment_method %} is-active{% endif %}">
+              <div class="rt-bank-name">{{ bank.bank }}</div>
+              <div class="rt-bank-num">{{ bank.number }}</div>
+              <div class="rt-bank-holder">a.n. {{ bank.holder }}</div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Visual QRIS Dummy -->
+          <div class="rt-qris-box{% if order.payment_method == 'QRIS' %} is-active{% endif %}">
+            <div class="rt-qris-code" role="img" aria-label="QR Code QRIS Dummy TrailGear Rent">
+              <svg viewBox="0 0 120 120" width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+                <rect width="120" height="120" rx="8" fill="#ffffff" stroke="#101010" stroke-width="3"/>
+                <!-- Finder pattern kiri atas -->
+                <rect x="10" y="10" width="30" height="30" fill="none" stroke="#101010" stroke-width="4"/>
+                <rect x="18" y="18" width="14" height="14" fill="#101010"/>
+                <!-- Finder pattern kanan atas -->
+                <rect x="80" y="10" width="30" height="30" fill="none" stroke="#101010" stroke-width="4"/>
+                <rect x="88" y="18" width="14" height="14" fill="#101010"/>
+                <!-- Finder pattern kiri bawah -->
+                <rect x="10" y="80" width="30" height="30" fill="none" stroke="#101010" stroke-width="4"/>
+                <rect x="18" y="88" width="14" height="14" fill="#101010"/>
+                <!-- Data modules dummy -->
+                <rect x="48" y="12" width="6" height="6" fill="#101010"/>
+                <rect x="60" y="12" width="12" height="6" fill="#101010"/>
+                <rect x="48" y="24" width="12" height="6" fill="#101010"/>
+                <rect x="66" y="24" width="6" height="12" fill="#101010"/>
+                <rect x="12" y="48" width="12" height="6" fill="#101010"/>
+                <rect x="30" y="48" width="18" height="6" fill="#101010"/>
+                <rect x="54" y="48" width="12" height="12" fill="#101010"/>
+                <rect x="72" y="48" width="12" height="6" fill="#101010"/>
+                <rect x="90" y="48" width="18" height="6" fill="#101010"/>
+                <rect x="12" y="60" width="6" height="12" fill="#101010"/>
+                <rect x="24" y="60" width="12" height="6" fill="#101010"/>
+                <rect x="42" y="66" width="18" height="6" fill="#101010"/>
+                <rect x="72" y="60" width="6" height="18" fill="#101010"/>
+                <rect x="84" y="66" width="12" height="6" fill="#101010"/>
+                <rect x="102" y="60" width="6" height="18" fill="#101010"/>
+                <rect x="48" y="80" width="12" height="6" fill="#101010"/>
+                <rect x="66" y="84" width="12" height="12" fill="#101010"/>
+                <rect x="84" y="80" width="18" height="6" fill="#101010"/>
+                <rect x="48" y="96" width="6" height="12" fill="#101010"/>
+                <rect x="60" y="102" width="18" height="6" fill="#101010"/>
+                <rect x="84" y="96" width="12" height="12" fill="#101010"/>
+                <rect x="102" y="96" width="6" height="12" fill="#101010"/>
+              </svg>
+            </div>
+            <div class="rt-qris-info">
+              <span class="rt-qris-badge">QRIS · Standar Pembayaran Nasional</span>
+              <h4>TrailGear Rent Outdoor</h4>
+              <p>NMID: ID1026000123456 (Dummy Simulasi)</p>
+              <small>Scan menggunakan aplikasi m-Banking atau e-Wallet (GoPay, OVO, DANA, ShopeePay), lalu unggah tangkapan layar bukti bayar di bawah.</small>
+            </div>
+          </div>
+
+          <ol class="rt-pay-steps">
+            {% for step in payment_instructions %}<li>{{ step }}</li>{% endfor %}
+          </ol>
+          <p class="rt-pay-note">
+            Cantumkan kode booking <strong>{{ order.order_code }}</strong> pada berita transfer.
+            Konfirmasi manual bisa lewat tombol WhatsApp di bawah nota.
+          </p>
+        </div>
+
+        <!-- Area Tanda Tangan / Serah Terima Alat (Tampil saat Cetak Fisik Toko) -->
+        <div class="rt-handover-sign">
+          <div class="rt-handover-head">
+            <strong>BERITA ACARA SERAH TERIMA ALAT &amp; JAMINAN KTP ASLI</strong>
+            <span>Checklist Kasir: [ &nbsp; ] KTP Asli Diterima &nbsp;&nbsp; [ &nbsp; ] Unit Lengkap &amp; Layak Pakai &nbsp;&nbsp; [ &nbsp; ] Pembayaran Lunas</span>
+          </div>
+          <div class="rt-sign-grid">
+            <div class="rt-sign-box">
+              <div class="rt-sign-role">Diserahkan Oleh (Kasir / Petugas Toko)</div>
+              <div class="rt-sign-space"></div>
+              <div class="rt-sign-name">( .................................................. )</div>
+              <small>TrailGear Rent</small>
+            </div>
+            <div class="rt-sign-box">
+              <div class="rt-sign-role">Diterima Oleh (Penyewa + KTP Asli)</div>
+              <div class="rt-sign-space"></div>
+              <div class="rt-sign-name">( {{ order.full_name }} )</div>
+              <small>NIK: {{ order.id_card_number }}</small>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="rt-receipt-foot">
+        <strong>Syarat &amp; ketentuan:</strong> Penyewa wajib menyerahkan <strong>KTP asli fisik</strong> (NIK {{ order.id_card_number }})
+        sebagai jaminan saat pengambilan alat di toko. KTP asli dikembalikan penuh setelah seluruh alat diterima kembali
+        dalam keadaan lengkap dan baik. Keterlambatan pengembalian dikenakan biaya sewa tambahan per hari.
+        Nomor nota <strong>{{ order.order_code }}</strong> adalah bukti pemesanan resmi TrailGear Rent.
+      </div>
+    </div>
+
+    <!-- ===== Area Pembayaran / Bukti Transfer (Disembunyikan saat Cetak) ===== -->
+    {% if order.payment_method == 'CASH' %}
+    <div class="rt-upload rt-cod-box rt-no-print">
+      <div class="rt-upload-head" style="margin-bottom:0">
+        <div>
+          <h2 class="rt-upload-title">Pembayaran Tunai di Toko (COD)</h2>
+          <p class="rt-cod-msg">
+            Pembayaran dilakukan langsung secara tunai di kasir toko saat pengambilan alat.
+          </p>
+        </div>
+        <span class="rt-pill active">Tunai / COD</span>
+      </div>
+    </div>
+    {% elif order.has_payment_proof or order.user_id == user.id %}
+    <div class="rt-upload rt-no-print">
+      <div class="rt-upload-head">
+        <div>
+          <h2 class="rt-upload-title">Bukti Pembayaran</h2>
+          <p class="rt-upload-sub">
+            Unggah foto/screenshot transfer atau QRIS (JPG, PNG, WEBP, atau PDF, maks. 5 MB).
+          </p>
+        </div>
+        {% if order.has_payment_proof %}
+          <span class="rt-pill paid">Ada struk</span>
+        {% else %}
+          <span class="rt-pill pending">Belum ada struk</span>
+        {% endif %}
+      </div>
+
+      {% if order.has_payment_proof %}
+      <div class="rt-proof">
+        {% if order.payment_proof_is_image %}
+          <a class="rt-proof-thumb" href="{% url 'rentals:payment_proof' order.order_code %}" target="_blank" rel="noopener">
+            <img src="{% url 'rentals:payment_proof' order.order_code %}" alt="Bukti pembayaran {{ order.order_code }}">
+          </a>
+        {% else %}
+          <a class="rt-proof-file" href="{% url 'rentals:payment_proof' order.order_code %}" target="_blank" rel="noopener">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+            Buka berkas bukti ({{ order.payment_proof_ext|cut:"."|upper }})
+          </a>
+        {% endif %}
+        <div class="rt-proof-meta">
+          <div><span>Diunggah</span><strong>{{ order.payment_proof_uploaded_at|date:"d M Y, H:i"|default:"—" }} WIB</strong></div>
+          <div><span>Metode</span><strong>{{ order.formatted_payment_method }}</strong></div>
+          <div>
+            <span>Status</span>
+            {% if order.status == 'MENUNGGU_PEMBAYARAN' %}
+              <strong class="rt-proof-wait">Menunggu Verifikasi Staf/Kasir</strong>
+            {% else %}
+              <strong class="rt-proof-ok">Sudah diproses ({{ order.get_status_display }})</strong>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if order.user_id == user.id and can_upload_proof %}
+      <details class="rt-upload-form" {% if not order.has_payment_proof %}open{% endif %}>
+        <summary>{% if order.has_payment_proof %}Unggah ulang bukti (salah kirim?){% else %}Unggah bukti transfer{% endif %}</summary>
+        <form method="post" enctype="multipart/form-data"
+              action="{% url 'rentals:upload_payment_proof' order.order_code %}">
+          {% csrf_token %}
+          <div class="rt-form-grid">
+            <div class="rt-field {% if proof_form.payment_method.errors %}has-error{% endif %}">
+              <label for="id_payment_method">Metode Pembayaran</label>
+              {{ proof_form.payment_method }}
+              {% for error in proof_form.payment_method.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="rt-field {% if proof_form.payment_proof.errors %}has-error{% endif %}">
+              <label for="id_payment_proof">Berkas Bukti <span class="req">*</span></label>
+              {{ proof_form.payment_proof }}
+              <span class="hint">Hanya JPG/JPEG/PNG/WEBP/PDF, maksimal 5 MB.</span>
+              {% for error in proof_form.payment_proof.errors %}<span class="err">{{ error }}</span>{% endfor %}
+            </div>
+          </div>
+          <button type="submit" class="rt-btn primary" style="margin-top:14px">Kirim Bukti Pembayaran</button>
+        </form>
+      </details>
+      {% elif order.user_id == user.id and order.has_payment_proof and not can_upload_proof %}
+        <p class="rt-pay-note">Pesanan sudah {{ order.get_status_display }}, bukti tidak dapat diubah lagi.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="rt-receipt-actions rt-no-print">
+      <a class="rt-btn wa" href="{{ wa_link }}" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+        Konfirmasi via WhatsApp
+      </a>
+      <button type="button" class="rt-btn primary" onclick="window.print()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        Cetak Nota
+      </button>
+      <a href="{% url 'accounts:transaction_list' %}" class="rt-btn ghost">Lihat Semua Transaksi</a>
+      <a href="{% url 'catalog:product_list' %}" class="rt-btn ghost">Sewa Alat Lain</a>
+      {% if is_staff_viewer %}
+        <a href="{% url 'rentals:staff_order_list' %}" class="rt-btn ghost">Kelola Pesanan (Staf)</a>
+      {% endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}

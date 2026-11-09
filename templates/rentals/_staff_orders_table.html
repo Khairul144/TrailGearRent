@@ -1,0 +1,86 @@
+<div class="table-wrap">
+  <table class="dash-table rt-table-compact">
+    <thead>
+      <tr>
+        <th>Kode Booking</th>
+        <th>Penyewa</th>
+        <th>Alat</th>
+        <th>Jadwal</th>
+        <th>Total</th>
+        <th>Bukti</th>
+        <th>Status</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in open_orders %}
+      <tr data-status="{{ order.status }}">
+        <td class="mono">
+          <a href="{% url 'rentals:order_detail' order.order_code %}">{{ order.order_code }}</a>
+          <br><small>{{ order.created_at|date:"d M Y, H:i" }}</small>
+        </td>
+        <td>
+          <div class="rt-cust">
+            <b>{{ order.full_name }}</b>
+            <small>{{ order.phone_number }}</small>
+          </div>
+        </td>
+        <td>
+          {{ order.items_summary }}
+          <br><small>{{ order.total_units }} unit</small>
+        </td>
+        <td>
+          {{ order.pickup_plan_date|date:"d M" }} – {{ order.return_plan_date|date:"d M Y" }}
+        </td>
+        <td class="mono">{{ order.formatted_grand_total }}</td>
+        <td>
+          {% if order.has_payment_proof %}
+            <a class="proof-badge yes" href="{% url 'rentals:payment_proof' order.order_code %}" target="_blank" rel="noopener" title="Lihat bukti transfer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 7"/></svg>
+              Ada Struk
+            </a>
+          {% else %}
+            <span class="proof-badge no">Belum Ada Struk</span>
+          {% endif %}
+        </td>
+        <td><span class="badge {{ order.badge_class }}">{{ order.get_status_display }}</span></td>
+        <td>
+          <div class="rt-staff-actions">
+            {% if order.can_confirm %}
+            <form method="post" action="{% url 'rentals:staff_order_action' order.order_code 'confirm' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="rt-action confirm">Konfirmasi Pesanan</button>
+            </form>
+            {% endif %}
+            {% if order.can_pickup %}
+            <form method="post" action="{% url 'rentals:staff_order_action' order.order_code 'pickup' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="rt-action pickup">Serah Terima Alat</button>
+            </form>
+            {% endif %}
+            {% if order.can_return %}
+            <form method="post" action="{% url 'rentals:staff_order_action' order.order_code 'return' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="rt-action return">Selesai / Kembali</button>
+            </form>
+            {% endif %}
+            {% if order.can_cancel %}
+            <form method="post" action="{% url 'rentals:staff_order_action' order.order_code 'cancel' %}"
+                  onsubmit="return confirm('Batalkan pesanan {{ order.order_code }}? Stok akan dikembalikan bila sudah dikurangi.');">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="rt-action cancel">Batalkan</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8">Belum ada pesanan yang perlu diproses.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

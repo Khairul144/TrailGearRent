@@ -1,0 +1,131 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Barang & Stok — Admin TrailGear{% endblock %}
+{% block page_title %}Barang &amp; Stok{% endblock %}
+{% block page_sub %}Pantau ketersediaan unit. Perubahan stok tercatat di log inventaris.{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/catalog/product/add/" class="btn-xs primary">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    Tambah Barang
+  </a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini"><div class="k">Total Barang</div><div class="v">{{ total_products }}</div></div>
+  <div class="adm-mini"><div class="k">Stok Menipis (≤2)</div><div class="v" style="color:#b26a00">{{ total_low }}</div></div>
+  <div class="adm-mini"><div class="k">Stok Habis</div><div class="v" style="color:#c62828">{{ total_out }}</div></div>
+</div>
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Daftar Barang</div>
+      <div class="panel-sub">{{ page_obj.paginator.count }} barang cocok dengan filter</div>
+    </div>
+    <a href="/admin/catalog/inventorylog/" class="panel-link">Log inventaris</a>
+  </div>
+
+  <form class="adm-filters" method="get" action="{% url 'accounts:admin_products' %}">
+    <div class="adm-field grow">
+      <label for="fq">Cari</label>
+      <input type="text" id="fq" name="q" value="{{ query }}" placeholder="nama barang, merek, kategori">
+    </div>
+    <div class="adm-field">
+      <label for="fcat">Kategori</label>
+      <select id="fcat" name="cat">
+        <option value="">Semua kategori</option>
+        {% for c in categories %}
+          <option value="{{ c.slug }}" {% if cat_slug == c.slug %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="adm-field">
+      <label for="fstok">Stok</label>
+      <select id="fstok" name="stok">
+        <option value="">Semua stok</option>
+        <option value="low" {% if stock_filter == 'low' %}selected{% endif %}>Menipis (1-2)</option>
+        <option value="out" {% if stock_filter == 'out' %}selected{% endif %}>Habis</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-xs primary">Terapkan</button>
+    {% if query or cat_slug or stock_filter %}
+      <a href="{% url 'accounts:admin_products' %}" class="adm-reset">Reset</a>
+    {% endif %}
+  </form>
+
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Barang</th>
+            <th>Harga / Hari</th>
+            <th>Stok Tersedia</th>
+            <th>Total Unit</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in products %}
+          <tr>
+            <td>
+              <div class="adm-prod">
+                <span class="adm-thumb" style="background-image:url('{{ p.get_image_url }}')"></span>
+                <div>
+                  <div class="adm-prod-name">{{ p.name }}</div>
+                  <div class="adm-prod-cat">{{ p.category.name }}{% if p.brand_name %} &bull; {{ p.brand_name }}{% endif %}</div>
+                </div>
+              </div>
+            </td>
+            <td class="adm-nowrap">{{ p.formatted_price }}</td>
+            <td>
+              {% if p.available_stock == 0 %}
+                <span class="adm-stock out">{{ p.available_stock }} <small>/ {{ p.total_stock }}</small></span>
+              {% elif p.available_stock <= 2 %}
+                <span class="adm-stock low">{{ p.available_stock }} <small>/ {{ p.total_stock }}</small></span>
+              {% else %}
+                <span class="adm-stock ok">{{ p.available_stock }} <small>/ {{ p.total_stock }}</small></span>
+              {% endif %}
+            </td>
+            <td class="mono">{{ p.total_stock }}</td>
+            <td>
+              {% if not p.is_active %}<span class="badge cancelled">Nonaktif</span>
+              {% elif p.available_stock == 0 %}<span class="badge rejected">Stok Habis</span>
+              {% else %}<span class="badge active">Tersedia</span>{% endif %}
+            </td>
+            <td><a class="btn-xs" href="/admin/catalog/product/{{ p.pk }}/change/">Edit</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">Tidak ada barang yang cocok dengan filter.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="adm-pager">
+    <span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+    <div class="adm-pager-links">
+      {% if page_obj.has_previous %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      {% else %}<span class="adm-page disabled">&lsaquo;</span>{% endif %}
+      {% for num in page_range %}
+        {% if num == page_obj.number %}<span class="adm-page active">{{ num }}</span>
+        {% elif num == "…" %}<span class="adm-page dots">…</span>
+        {% else %}<a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      {% else %}<span class="adm-page disabled">&rsaquo;</span>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,29 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Rahasia / kredensial
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Django
+*.log
+db.sqlite3
+staticfiles/
+logs/
+.cache/
+# Bukti pembayaran pelanggan — data sensitif, jangan ikut repo
+media/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

@@ -1,0 +1,38 @@
+{% load static %}
+<div class="product-card wow{% if not product.in_stock %} is-out{% endif %}">
+  <a href="{% url 'catalog:product_detail' product.slug %}{% if schedule_qs %}?{{ schedule_qs }}{% endif %}" class="product-image-link" aria-label="{{ product.name }}">
+    <div class="product-image" style="background-image:url('{{ product.get_image_url }}')"></div>
+    {% if not product.in_stock %}
+      <span class="stock-badge out">Stok Habis</span>
+    {% elif product.available_stock <= 2 %}
+      <span class="stock-badge low">Sisa {{ product.available_stock }}</span>
+    {% endif %}
+  </a>
+  <div class="product-info">
+    <div class="product-title"><a href="{% url 'catalog:product_detail' product.slug %}{% if schedule_qs %}?{{ schedule_qs }}{% endif %}">{{ product.name }}</a></div>
+    <div class="product-price">{{ product.formatted_price }}<span class="per-day"> / hari</span></div>
+
+    {% if user.is_authenticated %}
+      {% if product.in_stock %}
+      <form class="card-add" method="post" action="{% url 'rentals:add_to_cart' product.slug %}">
+        {% csrf_token %}
+        <input type="hidden" name="tgl" value="{% if schedule.start %}{{ schedule.start|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}">
+        <input type="hidden" name="durasi" value="{{ schedule.duration|default:1 }}">
+        <input type="hidden" name="qty" value="1">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn-add-cart">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+          <span class="btn-add-cart-label">Tambah keranjang</span>
+        </button>
+      </form>
+      {% else %}
+      <button type="button" class="btn-add-cart is-disabled" disabled>Stok Habis</button>
+      {% endif %}
+    {% else %}
+      <a class="card-login-hint" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Masuk untuk sewa
+      </a>
+    {% endif %}
+  </div>
+</div>

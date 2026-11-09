@@ -1,0 +1,25 @@
+﻿SELECT version();
+                                 version                                 
+-------------------------------------------------------------------------
+ PostgreSQL 18.6 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit
+(1 row)
+
+SELECT rolname, rolsuper FROM pg_roles WHERE rolname = current_user;
+ rolname  | rolsuper 
+----------+----------
+ postgres | t
+(1 row)
+
+SHOW config_file;
+                config_file                
+-------------------------------------------
+ D:/Apps/PostgreSQL18/data/postgresql.conf
+(1 row)
+
+SHOW hba_file;
+               hba_file                
+---------------------------------------
+ D:/Apps/PostgreSQL18/data/pg_hba.conf
+(1 row)
+
+
