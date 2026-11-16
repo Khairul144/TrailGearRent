@@ -39,8 +39,28 @@ urlpatterns = [
         views.payment_proof_file,
         name="payment_proof",
     ),
+    path(
+        "orders/<str:order_code>/cancel/",
+        views.customer_cancel_order,
+        name="customer_cancel_order",
+    ),
     # Dashboard staff (kasir & admin)
     path("dashboard/orders/", views.staff_order_list, name="staff_order_list"),
+    path(
+        "dashboard/orders/lookup/",
+        views.staff_order_lookup,
+        name="staff_order_lookup",
+    ),
+    path(
+        "dashboard/returns/<str:order_code>/",
+        views.return_inspection,
+        name="return_inspection",
+    ),
+    path(
+        "dashboard/returns/<str:order_code>/settle-fine/",
+        views.settle_fine,
+        name="settle_fine",
+    ),
     path(
         "dashboard/orders/<str:order_code>/<str:action>/",
         views.staff_order_action,

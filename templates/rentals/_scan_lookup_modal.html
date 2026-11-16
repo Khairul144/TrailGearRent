@@ -1,0 +1,204 @@
+<!-- Modal Pencarian Cepat / Scan Kode Booking Kasir -->
+<div class="rt-scan-overlay" id="scanLookupModal" role="dialog" aria-modal="true" aria-labelledby="scanModalTitle" hidden>
+  <div class="rt-scan-card">
+    <div class="rt-scan-head">
+      <div>
+        <h3 id="scanModalTitle" class="rt-scan-title">Scan / Cari Cepat Kode Booking</h3>
+        <p class="rt-scan-sub">Ketik atau arahkan scanner barcode/QR ke kode nota pelanggan (atau masukkan 16 digit NIK KTP).</p>
+      </div>
+      <button type="button" class="rt-scan-close" id="btnCloseScanModal" aria-label="Tutup dialog">&times;</button>
+    </div>
+
+    <form method="get" action="{% url 'rentals:staff_order_lookup' %}" id="scanLookupForm" class="rt-scan-form">
+      <div class="rt-scan-input-row">
+        <input type="text"
+               id="scanOrderInput"
+               name="q"
+               placeholder="Contoh: TG-20261115-ABCD atau 16 digit NIK KTP"
+               autocomplete="off"
+               required>
+        <button type="submit" class="rt-btn primary" id="btnScanSubmit">Cari Pesanan</button>
+      </div>
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    </form>
+
+    <div id="scanLookupResult" class="rt-scan-result" hidden></div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById("scanLookupModal");
+    const openBtns = document.querySelectorAll("[data-open-scan-modal], #btnScanPickup");
+    const closeBtn = document.getElementById("btnCloseScanModal");
+    const form = document.getElementById("scanLookupForm");
+    const input = document.getElementById("scanOrderInput");
+    const resultBox = document.getElementById("scanLookupResult");
+    const submitBtn = document.getElementById("btnScanSubmit");
+    if (!modal || !form || !input) return;
+
+    function getCsrfToken() {
+      const el = document.querySelector("input[name='csrfmiddlewaretoken']");
+      return el ? el.value : "";
+    }
+
+    function safePath(url, fallback) {
+      return typeof url === "string" && /^\/(?!\/)/.test(url) ? url : fallback;
+    }
+
+    function openModal() {
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      setTimeout(() => input.focus(), 40);
+    }
+
+    function closeModal() {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    openBtns.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        openModal();
+      });
+    });
+
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.hidden) closeModal();
+    });
+
+    function createMetaItem(label, val) {
+      const wrap = document.createElement("div");
+      const k = document.createElement("div");
+      k.className = "k";
+      k.textContent = label;
+      const v = document.createElement("div");
+      v.className = "v";
+      v.textContent = val || "—";
+      wrap.appendChild(k);
+      wrap.appendChild(v);
+      return wrap;
+    }
+
+    function createPostActionForm(actionUrl, btnClass, btnText) {
+      const f = document.createElement("form");
+      f.method = "post";
+      f.action = safePath(actionUrl, "#");
+      const csrf = document.createElement("input");
+      csrf.type = "hidden";
+      csrf.name = "csrfmiddlewaretoken";
+      csrf.value = getCsrfToken();
+      const next = document.createElement("input");
+      next.type = "hidden";
+      next.name = "next";
+      next.value = window.location.pathname + window.location.search;
+      const btn = document.createElement("button");
+      btn.type = "submit";
+      btn.className = btnClass;
+      btn.textContent = btnText;
+      f.appendChild(csrf);
+      f.appendChild(next);
+      f.appendChild(btn);
+      return f;
+    }
+
+    function renderResult(data) {
+      resultBox.innerHTML = "";
+      resultBox.hidden = false;
+
+      if (!data.ok) {
+        const err = document.createElement("div");
+        err.className = "rt-alert error";
+        err.textContent = data.message || "Pesanan tidak ditemukan.";
+        resultBox.appendChild(err);
+        return;
+      }
+
+      const card = document.createElement("div");
+      card.className = "rt-scan-found";
+
+      const top = document.createElement("div");
+      top.className = "rt-scan-found-head";
+      const codeEl = document.createElement("strong");
+      codeEl.className = "mono";
+      codeEl.textContent = data.order_code;
+      const badge = document.createElement("span");
+      badge.className = "badge " + (data.badge_class || "pending");
+      badge.textContent = data.status_display || data.status;
+      top.appendChild(codeEl);
+      top.appendChild(badge);
+
+      const grid = document.createElement("div");
+      grid.className = "rt-meta-grid";
+      grid.appendChild(createMetaItem("Nama Penyewa", data.full_name));
+      grid.appendChild(createMetaItem("NIK KTP", data.id_card_number));
+      grid.appendChild(createMetaItem("No. WhatsApp", data.phone_number));
+      grid.appendChild(createMetaItem("Peralatan", data.items_summary + " (" + data.total_units + " unit)"));
+      grid.appendChild(createMetaItem("Jadwal Sewa", data.pickup_plan_date + " \u2192 " + data.return_plan_date));
+      grid.appendChild(createMetaItem("Grand Total", data.formatted_grand_total));
+
+      const actions = document.createElement("div");
+      actions.className = "rt-scan-actions";
+
+      const detailLink = document.createElement("a");
+      detailLink.className = "rt-btn ghost";
+      detailLink.href = safePath(data.detail_url, "#");
+      detailLink.textContent = "Buka Detail / Nota";
+      actions.appendChild(detailLink);
+
+      if (data.can_pickup && data.pickup_url) {
+        actions.appendChild(
+          createPostActionForm(data.pickup_url, "rt-btn primary", "Serah Terima Alat (Diambil)")
+        );
+      }
+      if (data.can_confirm && data.confirm_url) {
+        actions.appendChild(
+          createPostActionForm(data.confirm_url, "rt-btn primary", "Konfirmasi Pembayaran")
+        );
+      }
+      if (data.can_return && data.inspection_url) {
+        const inspectLink = document.createElement("a");
+        inspectLink.className = "rt-btn primary";
+        inspectLink.href = safePath(data.inspection_url, "#");
+        inspectLink.textContent = "Pemeriksaan & Serah Terima Kembali";
+        actions.appendChild(inspectLink);
+      }
+
+      card.appendChild(top);
+      card.appendChild(grid);
+      card.appendChild(actions);
+      resultBox.appendChild(card);
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = input.value.trim();
+      if (!q) return;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Mencari...";
+      }
+      try {
+        const url = form.action + "?q=" + encodeURIComponent(q) + "&format=json";
+        const res = await fetch(url, {
+          headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" },
+          credentials: "same-origin",
+        });
+        const data = await res.json();
+        renderResult(data);
+      } catch (err) {
+        form.submit();
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Cari Pesanan";
+        }
+      }
+    });
+  })();
+</script>

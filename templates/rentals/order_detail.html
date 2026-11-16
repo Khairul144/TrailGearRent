@@ -71,6 +71,9 @@
                 <td>
                   <div class="strong">{{ item.product.name }}</div>
                   <small style="color:var(--neutral-500)">{{ item.product.category.name }}</small>
+                  {% if order.actual_return_date %}
+                    <br><small style="color:var(--brand-dark);font-weight:700">Kondisi kembali: {{ item.get_condition_at_return_display }}{% if item.item_damage_fee %} (Biaya: Rp {{ item.item_damage_fee|floatformat:0 }}){% endif %}</small>
+                  {% endif %}
                 </td>
                 <td class="num">{{ item.formatted_unit_price }}</td>
                 <td class="num">{{ item.duration_days }} hari</td>
@@ -90,6 +93,23 @@
 
         {% if order.notes %}
           <div class="rt-info"><strong>Catatan:</strong> {{ order.notes|linebreaksbr }}</div>
+        {% endif %}
+
+        {% if order.actual_return_date %}
+        <div class="rt-return-summary">
+          <h3 class="rt-payinfo-title">Serah Terima Pengembalian</h3>
+          <div class="rt-meta-grid">
+            <div><div class="k">Tanggal Riil Kembali</div><div class="v">{{ order.actual_return_date|date:"d M Y" }}</div></div>
+            <div><div class="k">Keterlambatan</div><div class="v">{{ order.overdue_days }} hari</div></div>
+            <div><div class="k">Denda Keterlambatan</div><div class="v">{{ order.formatted_overdue_fine }}</div></div>
+            <div><div class="k">Biaya Kerusakan</div><div class="v">{{ order.formatted_damage_fine }}</div></div>
+            <div><div class="k">Total Denda</div><div class="v">{{ order.formatted_total_fine }}</div></div>
+            <div><div class="k">Status Denda</div><div class="v">{{ order.get_fine_payment_status_display }}</div></div>
+          </div>
+          {% if order.return_notes %}
+            <p class="rt-pay-note"><strong>Catatan kasir:</strong> {{ order.return_notes }}</p>
+          {% endif %}
+        </div>
         {% endif %}
 
         <div class="rt-payinfo rt-no-print">
@@ -287,8 +307,23 @@
       </button>
       <a href="{% url 'accounts:transaction_list' %}" class="rt-btn ghost">Lihat Semua Transaksi</a>
       <a href="{% url 'catalog:product_list' %}" class="rt-btn ghost">Sewa Alat Lain</a>
+      {% if order.user_id == user.id and order.can_customer_cancel %}
+      <form method="post" action="{% url 'rentals:customer_cancel_order' order.order_code %}"
+            onsubmit="return confirm('Batalkan pesanan {{ order.order_code }}? Tindakan ini tidak dapat dibatalkan.');">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="rt-btn danger" id="btnCancelOrder">Batalkan Pesanan</button>
+      </form>
+      {% endif %}
       {% if is_staff_viewer %}
         <a href="{% url 'rentals:staff_order_list' %}" class="rt-btn ghost">Kelola Pesanan (Staf)</a>
+        {% if order.total_fine and order.fine_payment_status != 'LUNAS' %}
+        <form method="post" action="{% url 'rentals:settle_fine' order.order_code %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="rt-btn primary">Tandai Denda Lunas</button>
+        </form>
+        {% endif %}
       {% endif %}
     </div>
   </div>

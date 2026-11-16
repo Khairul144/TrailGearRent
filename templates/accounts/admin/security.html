@@ -2,10 +2,123 @@
 {% load static %}
 
 {% block title %}Keamanan — Admin TrailGear{% endblock %}
-{% block page_title %}Keamanan{% endblock %}
-{% block page_sub %}Log peristiwa autentikasi &amp; akses. Data sensitif tidak pernah dicatat.{% endblock %}
+{% block page_title %}Keamanan &amp; Audit{% endblock %}
+{% block page_sub %}Audit log peristiwa keamanan, kontrol buka blokir IP/akun, status audit DBMS, dan laporan User Access Review (UAR).{% endblock %}
+
+{% block page_actions %}
+  <form method="post" action="{% url 'accounts:admin_reset_ratelimit' %}" style="margin:0">
+    {% csrf_token %}
+    <input type="hidden" name="mode" value="all">
+    <button type="submit" class="btn-xs primary">
+      Buka Blokir Semua Rate Limit IP
+    </button>
+  </form>
+{% endblock %}
 
 {% block admin_content %}
+
+{% if db_audit_config %}
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini"><div class="k">DBMS log_statement</div><div class="v">{{ db_audit_config.log_statement }}</div></div>
+  <div class="adm-mini"><div class="k">DBMS log_connections</div><div class="v">{{ db_audit_config.log_connections }}</div></div>
+  <div class="adm-mini"><div class="k">DBMS log_disconnections</div><div class="v">{{ db_audit_config.log_disconnections }}</div></div>
+  <div class="adm-mini"><div class="k">DBMS logging_collector</div><div class="v">{{ db_audit_config.logging_collector }}</div></div>
+</div>
+{% endif %}
+
+<!-- ===== KONTROL BUKA BLOKIR / RESET RATE LIMIT IP & AKUN ===== -->
+<div class="panel" style="margin-top:0; margin-bottom:24px" id="ratelimit-control">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Buka Blokir / Reset Rate Limit IP &amp; Kunci Akun</div>
+      <div class="panel-sub">Hapus batas tunggu 10 menit registrasi/login pada IP tertentu atau buka akun yang terkunci tanpa terminal.</div>
+    </div>
+  </div>
+
+  <form class="adm-filters" method="post" action="{% url 'accounts:admin_reset_ratelimit' %}">
+    {% csrf_token %}
+    <div class="adm-field grow">
+      <label for="fip">Alamat IP yang Ingin Dibuka Blokirnya</label>
+      <input type="text" id="fip" name="ip" value="127.0.0.1" placeholder="contoh: 127.0.0.1">
+    </div>
+    <button type="submit" class="btn-xs primary">Buka Blokir / Reset IP Ini</button>
+  </form>
+
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Alamat IP</th>
+            <th>Counter Registrasi</th>
+            <th>Counter Login</th>
+            <th>Status Rate Limit</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rl in rate_limit_rows %}
+          <tr>
+            <td class="mono">{{ rl.ip }}</td>
+            <td class="mono">{{ rl.register_count }} / {{ rl.register_limit }}</td>
+            <td class="mono">{{ rl.login_count }} / {{ rl.login_limit }}</td>
+            <td>
+              {% if rl.any_blocked %}
+                <span class="badge rejected">Terblokir Sementara</span>
+              {% elif rl.any_active %}
+                <span class="badge pending">Ada Percobaan Gagal</span>
+              {% else %}
+                <span class="badge active">Normal / Bersih</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="{% url 'accounts:admin_reset_ratelimit' %}" style="margin:0">
+                {% csrf_token %}
+                <input type="hidden" name="ip" value="{{ rl.ip }}">
+                <button type="submit" class="btn-xs {% if rl.any_blocked %}primary{% endif %}">Reset IP</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if locked_users %}
+    <div style="margin-top:18px">
+      <div class="row-strong" style="margin-bottom:8px">Akun dengan Percobaan Login Gagal / Terkunci:</div>
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Gagal Beruntun</th>
+              <th>Terkunci Hingga</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lu in locked_users %}
+            <tr>
+              <td><a href="{% url 'accounts:admin_user_manage' lu.pk %}" class="row-strong">@{{ lu.username }}</a></td>
+              <td class="mono">{{ lu.failed_login_attempts }}x</td>
+              <td class="adm-nowrap">{{ lu.locked_until|date:"d M Y H:i:s"|default:"—" }}</td>
+              <td>
+                <form method="post" action="{% url 'accounts:admin_reset_ratelimit' %}" style="margin:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="unlock_user_id" value="{{ lu.pk }}">
+                  <button type="submit" class="btn-xs primary">Buka Kunci Akun</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
 
 <div class="panel" style="margin-top:0">
   <div class="panel-head">
@@ -51,6 +164,7 @@
             <th>User</th>
             <th>IP</th>
             <th>Keterangan</th>
+            <th>Aksi Cepat</th>
           </tr>
         </thead>
         <tbody>
@@ -65,12 +179,25 @@
               {% elif e.status == 'BLOCKED' %}<span class="badge pending">Blocked</span>
               {% else %}<span class="badge rejected">Failure</span>{% endif %}
             </td>
-            <td>{{ e.user.username|default:"—" }}</td>
+            <td>
+              {% if e.user %}
+                <a href="{% url 'accounts:admin_user_manage' e.user.pk %}">@{{ e.user.username }}</a>
+              {% else %}—{% endif %}
+            </td>
             <td class="mono">{{ e.ip_address|default:"—" }}</td>
             <td class="adm-muted">{{ e.description|default:"—"|truncatechars:80 }}</td>
+            <td>
+              {% if e.ip_address %}
+              <form method="post" action="{% url 'accounts:admin_reset_ratelimit' %}" style="margin:0">
+                {% csrf_token %}
+                <input type="hidden" name="ip" value="{{ e.ip_address }}">
+                <button type="submit" class="btn-xs">Reset IP</button>
+              </form>
+              {% else %}—{% endif %}
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="6">Belum ada peristiwa keamanan.</td></tr>
+          <tr><td colspan="7">Belum ada peristiwa keamanan.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -96,5 +223,92 @@
   </div>
   {% endif %}
 </div>
+
+<!-- ===== LAPORAN USER ACCESS REVIEW (UAR) — APLIKASI ===== -->
+<div class="panel" style="margin-top:24px" id="user-access-review">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Laporan User Access Review (UAR) — Akun Aplikasi</div>
+      <div class="panel-sub">Evaluasi berkala kesesuaian role, hak akses (Least Privilege), status akun, dan rekomendasi audit.</div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Akun</th>
+            <th>Role (RBAC)</th>
+            <th>Cakupan Privilege</th>
+            <th>Staff / Superuser</th>
+            <th>Login Terakhir</th>
+            <th>Temuan Audit</th>
+            <th>Keputusan UAR</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in uar_app_rows %}
+          <tr>
+            <td>
+              <div class="row-strong">@{{ row.user.username }}</div>
+              <small>{{ row.user.email|default:"—" }}</small>
+            </td>
+            <td><span class="badge role{% if row.role_name == 'Admin' %} role-admin{% endif %}">{{ row.role_name }}</span></td>
+            <td>{{ row.privilege_summary }}</td>
+            <td class="mono">staff={{ row.user.is_staff|yesno:"Ya,Tidak" }} / super={{ row.user.is_superuser|yesno:"Ya,Tidak" }}</td>
+            <td class="adm-nowrap">{{ row.user.last_login|date:"d M Y H:i"|default:"Belum pernah" }}</td>
+            <td>{{ row.finding }}</td>
+            <td><span class="badge {{ row.badge }}">{{ row.recommendation }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">Tidak ada data user.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LAPORAN USER ACCESS REVIEW (UAR) — DBMS POSTGRESQL ===== -->
+{% if uar_db_rows %}
+<div class="panel" style="margin-top:24px" id="dbms-access-review">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Laporan User Access Review (UAR) — Role DBMS PostgreSQL</div>
+      <div class="panel-sub">Pemeriksaan langsung katalog sistem <code>pg_roles</code> terhadap skema privilege minimum.</div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Role DBMS</th>
+            <th>Superuser</th>
+            <th>CreateRole / CreateDB</th>
+            <th>Can Login</th>
+            <th>Valid Until</th>
+            <th>Temuan Audit</th>
+            <th>Keputusan UAR</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in uar_db_rows %}
+          <tr>
+            <td class="mono">{{ r.rolname }}</td>
+            <td>{{ r.rolsuper|yesno:"Ya,Tidak" }}</td>
+            <td class="mono">{{ r.rolcreaterole|yesno:"Ya,Tidak" }} / {{ r.rolcreatedb|yesno:"Ya,Tidak" }}</td>
+            <td>{{ r.rolcanlogin|yesno:"Ya,Tidak" }}</td>
+            <td class="adm-nowrap">{{ r.rolvaliduntil|date:"Y-m-d H:i"|default:"infinity" }}</td>
+            <td>{{ r.finding }}</td>
+            <td><span class="badge {{ r.badge }}">{{ r.recommendation }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {% endblock %}

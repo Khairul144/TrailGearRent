@@ -1,0 +1,86 @@
+-- 1. Pemeriksaan User Access Review (UAR) Role DBMS SEBELUM Remediasi
+SELECT
+    rolname AS role_name,
+    rolsuper AS is_superuser,
+    rolcreaterole AS can_create_role,
+    rolcreatedb AS can_create_db,
+    rolcanlogin AS can_login,
+    rolvaliduntil AS valid_until,
+    CASE
+        WHEN rolsuper THEN 'REVIEW: Superuser (Khusus DBA)'
+        WHEN rolvaliduntil IS NOT NULL AND rolvaliduntil <= NOW() AND rolcanlogin THEN 'TEMUAN: Akun Expired masih memiliki hak LOGIN -> REVOKE LOGIN'
+        WHEN rolvaliduntil IS NOT NULL AND rolvaliduntil <= NOW() AND NOT rolcanlogin THEN 'OK: Akun Expired sudah NOLOGIN'
+        WHEN NOT rolcanlogin THEN 'OK: Group Role (Least Privilege)'
+        ELSE 'OK: Akun Aplikasi Aktif'
+    END AS status_uar
+FROM pg_roles
+WHERE rolname NOT LIKE 'pg_%'
+ORDER BY rolname;
+    role_name     | is_superuser | can_create_role | can_create_db | can_login |      valid_until       |                          status_uar                           
+------------------+--------------+-----------------+---------------+-----------+------------------------+---------------------------------------------------------------
+ postgres         | t            | t               | t             | t         |                        | REVIEW: Superuser (Khusus DBA)
+ role_auditor_db  | f            | f               | f             | f         |                        | OK: Group Role (Least Privilege)
+ role_customer_db | f            | f               | f             | f         |                        | OK: Group Role (Least Privilege)
+ role_kasir_db    | f            | f               | f             | f         |                        | OK: Group Role (Least Privilege)
+ tg_user          | f            | f               | t             | t         |                        | OK: Akun Aplikasi Aktif
+ uji_kuat         | f            | f               | f             | t         | 2026-01-01 00:00:00+07 | TEMUAN: Akun Expired masih memiliki hak LOGIN -> REVOKE LOGIN
+(6 rows)
+
+-- 2. Tindak Lanjut / Remediasi UAR: Cabut hak LOGIN dari akun uji_kuat yang sudah kedaluwarsa
+ALTER ROLE uji_kuat NOLOGIN;
+ALTER ROLE
+-- 3. Pemeriksaan User Access Review (UAR) Role DBMS SESUDAH Remediasi
+SELECT
+    rolname AS role_name,
+    rolsuper AS is_superuser,
+    rolcreaterole AS can_create_role,
+    rolcreatedb AS can_create_db,
+    rolcanlogin AS can_login,
+    rolvaliduntil AS valid_until,
+    CASE
+        WHEN rolsuper THEN 'MAINTAIN: Superuser (Khusus DBA)'
+        WHEN rolvaliduntil IS NOT NULL AND rolvaliduntil <= NOW() AND NOT rolcanlogin THEN 'REMEDIATED: Login telah dicabut (NOLOGIN)'
+        WHEN NOT rolcanlogin THEN 'MAINTAIN: Group Role (Least Privilege)'
+        ELSE 'MAINTAIN: Akun Aplikasi Aktif'
+    END AS status_uar
+FROM pg_roles
+WHERE rolname NOT LIKE 'pg_%'
+ORDER BY rolname;
+    role_name     | is_superuser | can_create_role | can_create_db | can_login |      valid_until       |                status_uar                 
+------------------+--------------+-----------------+---------------+-----------+------------------------+-------------------------------------------
+ postgres         | t            | t               | t             | t         |                        | MAINTAIN: Superuser (Khusus DBA)
+ role_auditor_db  | f            | f               | f             | f         |                        | MAINTAIN: Group Role (Least Privilege)
+ role_customer_db | f            | f               | f             | f         |                        | MAINTAIN: Group Role (Least Privilege)
+ role_kasir_db    | f            | f               | f             | f         |                        | MAINTAIN: Group Role (Least Privilege)
+ tg_user          | f            | f               | t             | t         |                        | MAINTAIN: Akun Aplikasi Aktif
+ uji_kuat         | f            | f               | f             | f         | 2026-01-01 00:00:00+07 | REMEDIATED: Login telah dicabut (NOLOGIN)
+(6 rows)
+
+-- 4. Pemeriksaan User Access Review (UAR) Akun Aplikasi TrailGear (accounts_user + auth_group)
+SELECT
+    u.id,
+    u.username,
+    u.email,
+    COALESCE(string_agg(g.name, ', '), 'TANPA_ROLE') AS assigned_role,
+    u.is_active,
+    u.is_staff,
+    u.is_superuser,
+    u.failed_login_attempts,
+    u.locked_until,
+    CASE
+        WHEN NOT u.is_active THEN 'REVOKE / NONAKTIF'
+        WHEN COALESCE(string_agg(g.name, ', '), '') = 'Admin' AND u.is_staff THEN 'MAINTAIN (Admin Sesuai Role)'
+        WHEN COALESCE(string_agg(g.name, ', '), '') = 'Cashier' AND NOT u.is_staff AND NOT u.is_superuser THEN 'MAINTAIN (Kasir Sesuai Least Privilege)'
+        WHEN COALESCE(string_agg(g.name, ', '), '') = 'Customer' AND NOT u.is_staff AND NOT u.is_superuser THEN 'MAINTAIN (Customer Sesuai Least Privilege)'
+        ELSE 'REVIEW PRIVILEGE'
+    END AS rekomendasi_uar
+FROM accounts_user u
+LEFT JOIN accounts_user_groups ug ON ug.user_id = u.id
+LEFT JOIN auth_group g ON g.id = ug.group_id
+GROUP BY u.id, u.username, u.email, u.is_active, u.is_staff, u.is_superuser, u.failed_login_attempts, u.locked_until
+ORDER BY u.id;
+ id | username |         email          | assigned_role | is_active | is_staff | is_superuser | failed_login_attempts | locked_until |             rekomendasi_uar             
+----+----------+------------------------+---------------+-----------+----------+--------------+-----------------------+--------------+-----------------------------------------
+  3 | admin1   | admin1@trailgear.local | Admin         | t         | t        | f            |                     0 |              | MAINTAIN (Admin Sesuai Role)
+  4 | kasir1   | kasir1@trailgear.local | Cashier       | t         | f        | f            |                     0 |              | MAINTAIN (Kasir Sesuai Least Privilege)
+(2 rows)

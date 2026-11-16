@@ -23,9 +23,15 @@ from catalog.models import Product
 
 from . import services
 from .constants import BANK_ACCOUNTS, PAYMENT_INSTRUCTIONS, WHATSAPP_NUMBER
-from .forms import CheckoutForm, PaymentProofUploadForm
+from .forms import CheckoutForm, PaymentProofUploadForm, ReturnInspectionForm
 from .models import RentalOrder
-from .services import CartError, OrderTransitionError, StockError
+from .services import (
+    CartError,
+    MakerCheckerViolationError,
+    OrderTransitionError,
+    ReturnValidationError,
+    StockError,
+)
 
 
 def _wants_json(request) -> bool:
@@ -108,7 +114,11 @@ def add_to_cart(request, slug):
             {
                 "ok": True,
                 "message": f"{product.name} ditambahkan ke keranjang.",
+                "product_name": product.name,
+                "quantity": item.quantity,
+                "duration_days": item.duration_days,
                 "cart_items_count": _cart_count(request),
+                "cart_url": reverse("rentals:cart_detail"),
                 "item_subtotal": item.subtotal,
             }
         )
@@ -484,6 +494,46 @@ def order_history(request):
     return redirect("accounts:transaction_list")
 
 
+@login_required
+@require_POST
+def customer_cancel_order(request, order_code):
+    """Batalkan pesanan mandiri oleh pelanggan saat masih Menunggu Pembayaran."""
+    order = get_object_or_404(RentalOrder, order_code=order_code)
+    if order.user_id != request.user.pk:
+        log_event(
+            request,
+            SecurityEvent.ACCESS_DENIED,
+            SecurityEvent.STATUS_BLOCKED,
+            user=request.user,
+            description=f"customer_cancel IDOR order={order.order_code}",
+        )
+        raise PermissionDenied("Anda tidak berhak membatalkan pesanan ini.")
+
+    try:
+        order = services.cancel_order_by_customer(order, request.user)
+    except OrderTransitionError as exc:
+        messages.error(request, str(exc))
+    else:
+        log_event(
+            request,
+            SecurityEvent.ORDER_CANCELLED,
+            SecurityEvent.STATUS_SUCCESS,
+            user=request.user,
+            description=f"order={order.order_code} user={request.user.pk}",
+        )
+        messages.success(
+            request,
+            f"Pesanan {order.order_code} telah berhasil dibatalkan.",
+        )
+
+    return redirect(
+        _safe_next(
+            request,
+            reverse("rentals:order_detail", kwargs={"order_code": order.order_code}),
+        )
+    )
+
+
 # ---------------------------------------------------------------------------
 # Dashboard staff: daftar & aksi pesanan
 # ---------------------------------------------------------------------------
@@ -515,10 +565,100 @@ def staff_order_list(request):
 
 
 @role_required(ROLE_CASHIER, ROLE_ADMIN)
+def staff_order_lookup(request):
+    """Pencarian cepat / scan kode booking & NIK untuk Kasir/Admin."""
+    import re
+
+    raw_q = (request.GET.get("q") or request.POST.get("q") or "").strip()[:120]
+    if not raw_q:
+        if _wants_json(request):
+            return JsonResponse(
+                {"ok": False, "message": "Masukkan kode booking atau NIK KTP."},
+                status=400,
+            )
+        messages.warning(request, "Masukkan kode booking atau NIK KTP.")
+        return redirect(_safe_next(request, reverse("accounts:cashier_dashboard")))
+
+    # Ekstrak pola TG-YYYYMMDD-XXXX jika input berasal dari scan URL QR Code penuh.
+    code_match = re.search(r"TG-\d{8}-[A-Z0-9]{4}", raw_q.upper())
+    candidate_code = code_match.group(0) if code_match else raw_q.upper()
+
+    base_qs = RentalOrder.objects.select_related("user").prefetch_related(
+        "items__product"
+    )
+    order = base_qs.filter(order_code__iexact=candidate_code).first()
+    if order is None and re.fullmatch(r"\d{16}", raw_q):
+        order = base_qs.filter(id_card_number=raw_q).order_by("-created_at").first()
+    if order is None:
+        order = (
+            base_qs.filter(order_code__icontains=raw_q)
+            .order_by("-created_at")
+            .first()
+        )
+
+    if order is None:
+        if _wants_json(request):
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "message": f"Pesanan dengan kode/NIK '{raw_q}' tidak ditemukan.",
+                },
+                status=404,
+            )
+        messages.error(
+            request, f"Pesanan dengan kode/NIK '{raw_q}' tidak ditemukan."
+        )
+        return redirect(_safe_next(request, reverse("accounts:cashier_dashboard")))
+
+    if _wants_json(request):
+        return JsonResponse(
+            {
+                "ok": True,
+                "order_code": order.order_code,
+                "full_name": order.full_name,
+                "id_card_number": order.id_card_number,
+                "phone_number": order.phone_number,
+                "status": order.status,
+                "status_display": order.get_status_display(),
+                "badge_class": order.badge_class,
+                "items_summary": order.items_summary,
+                "total_units": order.total_units,
+                "formatted_grand_total": order.formatted_grand_total,
+                "pickup_plan_date": order.pickup_plan_date.strftime("%d %b %Y"),
+                "return_plan_date": order.return_plan_date.strftime("%d %b %Y"),
+                "can_confirm": order.can_confirm,
+                "can_pickup": order.can_pickup,
+                "can_return": order.can_return,
+                "detail_url": reverse(
+                    "rentals:order_detail", kwargs={"order_code": order.order_code}
+                ),
+                "confirm_url": reverse(
+                    "rentals:staff_order_action",
+                    kwargs={"order_code": order.order_code, "action": "confirm"},
+                ),
+                "pickup_url": reverse(
+                    "rentals:staff_order_action",
+                    kwargs={"order_code": order.order_code, "action": "pickup"},
+                ),
+                "inspection_url": reverse(
+                    "rentals:return_inspection",
+                    kwargs={"order_code": order.order_code},
+                ),
+            }
+        )
+
+    return redirect("rentals:order_detail", order_code=order.order_code)
+
+
+@role_required(ROLE_CASHIER, ROLE_ADMIN)
 @require_POST
 def staff_order_action(request, order_code, action):
     """Aksi cepat: confirm / pickup / return / cancel (POST + CSRF)."""
     order = get_object_or_404(RentalOrder, order_code=order_code)
+    if action == "return":
+        # Pengembalian wajib lewat pemeriksaan fisik, bukan POST instan.
+        return redirect("rentals:return_inspection", order_code=order.order_code)
+
     new_status = services.ACTION_STATUS_MAP.get(action)
     if new_status is None:
         messages.error(request, "Aksi tidak dikenal.")
@@ -526,17 +666,179 @@ def staff_order_action(request, order_code, action):
 
     try:
         services.set_order_status(order, new_status, actor=request.user)
+    except MakerCheckerViolationError as exc:
+        log_event(
+            request,
+            SecurityEvent.MAKER_CHECKER_VIOLATION,
+            SecurityEvent.STATUS_BLOCKED,
+            user=request.user,
+            description=(
+                f"order={order.order_code} maker={order.user_id} "
+                f"checker={request.user.pk} action={action}"
+            ),
+        )
+        messages.error(request, str(exc))
     except OrderTransitionError as exc:
         messages.error(request, str(exc))
     except StockError as exc:
         messages.error(request, f"Gagal memproses: {exc}")
     else:
+        log_event(
+            request,
+            SecurityEvent.ORDER_APPROVED,
+            SecurityEvent.STATUS_SUCCESS,
+            user=request.user,
+            description=(
+                f"order={order.order_code} maker={order.user_id} "
+                f"checker={request.user.pk} action={action} status={new_status}"
+            ),
+        )
         messages.success(
             request,
             f"Pesanan {order.order_code} kini berstatus "
             f"{order.get_status_display()}.",
         )
     return redirect(_safe_next(request, reverse("rentals:staff_order_list")))
+
+
+@role_required(ROLE_CASHIER, ROLE_ADMIN)
+def return_inspection(request, order_code):
+    """Halaman pemeriksaan fisik & serah terima pengembalian alat."""
+    order = get_object_or_404(
+        RentalOrder.objects.select_related("user").prefetch_related(
+            "items__product"
+        ),
+        order_code=order_code,
+    )
+    if order.status != RentalOrder.Status.DIAMBIL:
+        messages.error(
+            request,
+            "Pemeriksaan pengembalian hanya untuk pesanan berstatus "
+            "Berjalan (Diambil).",
+        )
+        return redirect("rentals:staff_order_list")
+
+    form = ReturnInspectionForm(
+        request.POST or None,
+        order=order,
+        initial={"actual_return_date": date.today()},
+    )
+    rows = [
+        {
+            "item": item,
+            "condition_field": form[f"condition_{item.pk}"],
+            "damage_field": form[f"damage_{item.pk}"],
+        }
+        for item in order.items.select_related("product")
+    ]
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            order = services.complete_return(
+                order,
+                request.user,
+                actual_return_date=form.cleaned_data["actual_return_date"],
+                item_conditions=form.item_conditions(),
+                return_notes=form.cleaned_data.get("return_notes") or "",
+                fine_payment_method=form.cleaned_data.get("fine_payment_method")
+                or "CASH",
+            )
+        except MakerCheckerViolationError as exc:
+            log_event(
+                request,
+                SecurityEvent.MAKER_CHECKER_VIOLATION,
+                SecurityEvent.STATUS_BLOCKED,
+                user=request.user,
+                description=(
+                    f"order={order.order_code} maker={order.user_id} "
+                    f"checker={request.user.pk} action=return_inspection"
+                ),
+            )
+            messages.error(request, str(exc))
+        except (ReturnValidationError, OrderTransitionError) as exc:
+            messages.error(request, str(exc))
+        else:
+            log_event(
+                request,
+                SecurityEvent.RETURN_COMPLETED,
+                SecurityEvent.STATUS_SUCCESS,
+                user=request.user,
+                description=(
+                    f"order={order.order_code} actor={request.user.pk} "
+                    f"overdue_days={order.overdue_days} "
+                    f"total_fine={order.total_fine} "
+                    f"status={order.fine_payment_status}"
+                ),
+            )
+            messages.success(
+                request,
+                f"Pengembalian {order.order_code} selesai. "
+                f"Total denda: {order.formatted_total_fine}.",
+            )
+            return redirect("rentals:order_detail", order_code=order.order_code)
+
+    preview_date = _parse_date(request.POST.get("actual_return_date")) or date.today()
+    preview_days, preview_fine = services.calculate_overdue(order, preview_date)
+
+    return render(
+        request,
+        "rentals/return_inspection.html",
+        {
+            "order": order,
+            "form": form,
+            "rows": rows,
+            "today": date.today(),
+            "preview_date": preview_date,
+            "preview_days": preview_days,
+            "preview_fine": preview_fine,
+            "daily_rate": services.LATE_FEE_PER_DAY,
+        },
+    )
+
+
+@role_required(ROLE_CASHIER, ROLE_ADMIN)
+@require_POST
+def settle_fine(request, order_code):
+    """Tandai denda pengembalian sudah lunas (audit FINE_PAID)."""
+    order = get_object_or_404(RentalOrder, order_code=order_code)
+    try:
+        order = services.settle_fine(order, request.user)
+    except MakerCheckerViolationError as exc:
+        log_event(
+            request,
+            SecurityEvent.MAKER_CHECKER_VIOLATION,
+            SecurityEvent.STATUS_BLOCKED,
+            user=request.user,
+            description=(
+                f"order={order.order_code} maker={order.user_id} "
+                f"checker={request.user.pk} action=settle_fine"
+            ),
+        )
+        messages.error(request, str(exc))
+    except (ReturnValidationError, OrderTransitionError) as exc:
+        messages.error(request, str(exc))
+    else:
+        log_event(
+            request,
+            SecurityEvent.FINE_PAID,
+            SecurityEvent.STATUS_SUCCESS,
+            user=request.user,
+            description=(
+                f"order={order.order_code} actor={request.user.pk} "
+                f"total_fine={order.total_fine}"
+            ),
+        )
+        messages.success(
+            request,
+            f"Denda {order.order_code} ditandai lunas "
+            f"({order.formatted_total_fine}).",
+        )
+    return redirect(
+        _safe_next(
+            request,
+            reverse("rentals:order_detail", kwargs={"order_code": order.order_code}),
+        )
+    )
 
 
 def staff_stats() -> dict:

@@ -24,11 +24,26 @@ ALL_ROLES = (ROLE_CUSTOMER, ROLE_CASHIER, ROLE_ADMIN)
 _ROLE_PRIORITY = {ROLE_ADMIN: 0, ROLE_CASHIER: 1, ROLE_CUSTOMER: 2}
 
 
+def _sync_admin_group_permissions(admin_group):
+    """Berikan permission model utama ke group Admin agar /admin/ tidak 403."""
+    try:
+        from django.contrib.auth.models import Permission
+
+        perms = Permission.objects.filter(
+            content_type__app_label__in=["accounts", "catalog", "rentals", "auth"]
+        )
+        if perms.exists():
+            admin_group.permissions.set(perms)
+    except Exception:
+        pass
+
+
 def ensure_roles():
     """Buat group role bila belum ada (idempotent). Dipakai migration & command."""
     groups = {}
     for name in ALL_ROLES:
         groups[name], _ = Group.objects.get_or_create(name=name)
+    _sync_admin_group_permissions(groups[ROLE_ADMIN])
     return groups
 
 
@@ -67,4 +82,9 @@ def assign_role(user, role_name, exclusive=True):
     if exclusive:
         user.groups.remove(*Group.objects.filter(name__in=ALL_ROLES).exclude(pk=group.pk))
     user.groups.add(group)
+    if role_name == ROLE_ADMIN:
+        _sync_admin_group_permissions(group)
+        if not user.is_staff:
+            user.is_staff = True
+            user.save(update_fields=["is_staff"])
     return group

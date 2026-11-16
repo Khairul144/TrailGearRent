@@ -85,3 +85,39 @@ def login_bump(ip, identifier):
 def login_reset(ip, identifier):
     for key in login_keys(ip, identifier):
         cache.delete(key)
+
+
+def reset_ip(ip, identifiers=()):
+    """Hapus seluruh counter rate-limit (register & login) untuk satu IP."""
+    if not ip:
+        return
+    ip = ip.strip()
+    cache.delete(register_key(ip))
+    cache.delete(f"rl:login:ip:{ip}")
+    for ident in identifiers:
+        if ident:
+            cache.delete(f"rl:login:id:{ip}:{identity_hash(ident)}")
+
+
+def reset_all():
+    """Bersihkan seluruh cache rate-limit."""
+    cache.clear()
+
+
+def ip_status(ip):
+    """Status counter rate-limit saat ini untuk satu IP."""
+    reg_cnt = attempt_count(register_key(ip))
+    reg_lim = settings.RATE_LIMIT_REGISTER_ATTEMPTS
+    log_cnt = attempt_count(f"rl:login:ip:{ip}")
+    log_lim = settings.RATE_LIMIT_LOGIN_ATTEMPTS
+    return {
+        "ip": ip,
+        "register_count": reg_cnt,
+        "register_limit": reg_lim,
+        "register_blocked": reg_cnt >= reg_lim,
+        "login_count": log_cnt,
+        "login_limit": log_lim,
+        "login_blocked": log_cnt >= log_lim,
+        "any_active": reg_cnt > 0 or log_cnt > 0,
+        "any_blocked": (reg_cnt >= reg_lim) or (log_cnt >= log_lim),
+    }

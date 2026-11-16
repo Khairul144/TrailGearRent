@@ -469,6 +469,183 @@ def admin_staff(request):
 
 
 @role_required(ROLE_ADMIN)
+def admin_user_add(request):
+    """Tambah akun baru (Customer / Cashier / Admin) langsung dari Dashboard Admin."""
+    from .roles import ALL_ROLES, ensure_roles
+
+    ensure_roles()
+    default_role = request.GET.get("role")
+    if default_role not in ALL_ROLES:
+        default_role = ROLE_CUSTOMER
+
+    selected_role = request.POST.get("role") if request.method == "POST" else default_role
+    if selected_role not in ALL_ROLES:
+        selected_role = ROLE_CUSTOMER
+
+    form = RegistrationForm(request.POST or None)
+    error = None
+
+    if request.method == "POST":
+        if form.is_valid():
+            new_user = form.save(commit=True)
+            assign_role(new_user, selected_role, exclusive=True)
+            new_user.is_staff = selected_role == ROLE_ADMIN
+            new_user.save(update_fields=["is_staff"])
+            log_event(
+                request,
+                SecurityEvent.REGISTER_SUCCESS,
+                SecurityEvent.STATUS_SUCCESS,
+                user=new_user,
+                description=(
+                    f"created_by_admin={request.user.pk} "
+                    f"new_user={new_user.pk} role={selected_role}"
+                ),
+            )
+            messages.success(
+                request,
+                f"Akun @{new_user.username} dengan role {selected_role} berhasil dibuat.",
+            )
+            if selected_role in (ROLE_ADMIN, ROLE_CASHIER):
+                return redirect("accounts:admin_staff")
+            return redirect("accounts:admin_users")
+        error = _first_error_message(form) or "Data belum valid. Periksa kembali input Anda."
+
+    return _admin_render(
+        request,
+        "accounts/admin/user_add.html",
+        "staff" if selected_role in (ROLE_ADMIN, ROLE_CASHIER) else "users",
+        {
+            "form": form,
+            "error": error,
+            "selected_role": selected_role,
+            "role_choices": [
+                (ROLE_CUSTOMER, "Customer (Pelanggan)"),
+                (ROLE_CASHIER, "Cashier (Kasir Operasional)"),
+                (ROLE_ADMIN, "Admin (Administrator)"),
+            ],
+        },
+    )
+
+
+@role_required(ROLE_ADMIN)
+def admin_user_manage(request, user_id):
+    """Kelola akun user/staff (profil, ganti role, buka lockout, reset password)."""
+    from django.contrib.auth import password_validation
+    from django.core.exceptions import ValidationError
+    from django.shortcuts import get_object_or_404
+    from .roles import ALL_ROLES, ensure_roles
+
+    ensure_roles()
+    target = get_object_or_404(User, pk=user_id)
+    current_role = primary_role(target) or ROLE_CUSTOMER
+    profile_form = ProfileForm(instance=target)
+
+    if request.method == "POST":
+        action = request.POST.get("action") or "profile_role"
+
+        if action == "unlock":
+            target.failed_login_attempts = 0
+            target.locked_until = None
+            target.save(update_fields=["failed_login_attempts", "locked_until"])
+            ip_candidates = list(
+                SecurityEvent.objects.filter(user=target)
+                .exclude(ip_address__isnull=True)
+                .values_list("ip_address", flat=True)
+                .distinct()[:10]
+            )
+            for ip in set(ip_candidates + ["127.0.0.1"]):
+                ratelimit.reset_ip(ip, [target.username, target.email])
+            messages.success(
+                request,
+                f"Kunci akun @{target.username} telah dibuka dan counter gagal login direset.",
+            )
+            return redirect("accounts:admin_user_manage", user_id=target.pk)
+
+        if action == "reset_password":
+            new_pw = request.POST.get("new_password") or ""
+            confirm_pw = request.POST.get("new_password_confirmation") or ""
+            if not new_pw:
+                messages.error(request, "Password baru wajib diisi.")
+            elif new_pw != confirm_pw:
+                messages.error(request, "Konfirmasi password baru tidak cocok.")
+            else:
+                try:
+                    password_validation.validate_password(new_pw, target)
+                except ValidationError as exc:
+                    messages.error(request, exc.messages[0])
+                else:
+                    target.set_password(new_pw)
+                    target.failed_login_attempts = 0
+                    target.locked_until = None
+                    target.save(
+                        update_fields=[
+                            "password",
+                            "password_changed_at",
+                            "failed_login_attempts",
+                            "locked_until",
+                        ]
+                    )
+                    log_event(
+                        request,
+                        SecurityEvent.PASSWORD_CHANGED,
+                        SecurityEvent.STATUS_SUCCESS,
+                        user=target,
+                        description=f"reset_by_admin={request.user.pk} target={target.pk}",
+                    )
+                    messages.success(
+                        request, f"Password untuk @{target.username} berhasil diperbarui."
+                    )
+                    return redirect("accounts:admin_user_manage", user_id=target.pk)
+
+        elif action == "profile_role":
+            profile_form = ProfileForm(request.POST, instance=target)
+            new_role = request.POST.get("role") or current_role
+            want_active = request.POST.get("is_active") == "1"
+
+            if new_role not in ALL_ROLES:
+                messages.error(request, "Role tidak valid.")
+            elif target.pk == request.user.pk and not want_active:
+                messages.error(request, "Anda tidak dapat menonaktifkan akun sendiri.")
+            elif target.pk == request.user.pk and new_role != ROLE_ADMIN:
+                messages.error(request, "Anda tidak dapat menurunkan role Admin akun sendiri.")
+            elif profile_form.is_valid():
+                user_obj = profile_form.save(commit=False)
+                user_obj.is_active = want_active
+                if not user_obj.is_superuser:
+                    user_obj.is_staff = new_role == ROLE_ADMIN
+                user_obj.save()
+                assign_role(user_obj, new_role, exclusive=True)
+                messages.success(
+                    request,
+                    f"Data & role akun @{user_obj.username} ({new_role}) berhasil disimpan.",
+                )
+                return redirect("accounts:admin_user_manage", user_id=target.pk)
+            else:
+                messages.error(
+                    request,
+                    _first_error_message(profile_form)
+                    or "Gagal menyimpan perubahan. Periksa input Anda.",
+                )
+
+    current_role = primary_role(target) or ROLE_CUSTOMER
+    return _admin_render(
+        request,
+        "accounts/admin/user_manage.html",
+        "staff" if current_role in (ROLE_ADMIN, ROLE_CASHIER) else "users",
+        {
+            "target": target,
+            "current_role": current_role,
+            "profile_form": profile_form,
+            "role_choices": [
+                (ROLE_CUSTOMER, "Customer (Pelanggan)"),
+                (ROLE_CASHIER, "Cashier (Kasir Operasional)"),
+                (ROLE_ADMIN, "Admin (Administrator)"),
+            ],
+        },
+    )
+
+
+@role_required(ROLE_ADMIN)
 @require_http_methods(["POST"])
 def admin_user_toggle(request, user_id):
     """Aktifkan / nonaktifkan akun (tidak boleh untuk diri sendiri)."""
@@ -619,9 +796,127 @@ def admin_payments(request):
     )
 
 
+def _build_user_access_review():
+    """Susun data User Access Review (UAR) untuk akun aplikasi & role DBMS."""
+    from django.db import connection
+    from django.utils import timezone
+
+    app_rows = []
+    for u in User.objects.prefetch_related("groups").order_by("username"):
+        rname = primary_role(u) or "Tanpa Role"
+        if rname == ROLE_ADMIN:
+            priv_desc = "Full Admin Dashboard, Manajemen User/Katalog/Laporan"
+        elif rname == ROLE_CASHIER:
+            priv_desc = "Operasional Kasir (Verifikasi, Serah Terima, Inspeksi Kembali)"
+        elif rname == ROLE_CUSTOMER:
+            priv_desc = "Pelanggan (Katalog, Keranjang, Checkout & Pesanan Milik Sendiri)"
+        else:
+            priv_desc = "Tidak ada privilege role"
+
+        if not u.is_active:
+            finding = "Akun Nonaktif"
+            rec = "REVOKE / PERTAHANKAN NONAKTIF"
+            badge = "cancelled"
+        elif u.is_locked:
+            finding = "Akun Terkunci (Lockout)"
+            rec = "INVESTIGASI PERCOBAAN LOGIN"
+            badge = "rejected"
+        elif u.password_expired:
+            finding = "Password Kedaluwarsa"
+            rec = "WAJIB ROTASI PASSWORD"
+            badge = "pending"
+        elif rname == "Tanpa Role":
+            finding = "Belum Memiliki Group Role"
+            rec = "TETAPKAN ROLE / REVOKE"
+            badge = "pending"
+        elif rname in (ROLE_CUSTOMER, ROLE_CASHIER) and (u.is_staff or u.is_superuser):
+            finding = "Privilege Berlebih (is_staff/superuser pada non-Admin)"
+            rec = "DOWNGRADE PRIVILEGE (Cabut is_staff)"
+            badge = "rejected"
+        else:
+            finding = "Sesuai Least Privilege"
+            rec = "MAINTAIN (Pertahankan Akses)"
+            badge = "active"
+
+        app_rows.append(
+            {
+                "user": u,
+                "role_name": rname,
+                "privilege_summary": priv_desc,
+                "finding": finding,
+                "recommendation": rec,
+                "badge": badge,
+            }
+        )
+
+    db_rows = []
+    db_audit_config = {}
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT rolname, rolsuper, rolcreaterole, rolcreatedb, "
+                "rolcanlogin, rolvaliduntil "
+                "FROM pg_roles WHERE rolname NOT LIKE 'pg_%' ORDER BY rolname"
+            )
+            now_ts = timezone.now()
+            for (
+                rolname,
+                rolsuper,
+                rolcreaterole,
+                rolcreatedb,
+                rolcanlogin,
+                rolvaliduntil,
+            ) in cur.fetchall():
+                expired = bool(rolvaliduntil and rolvaliduntil <= now_ts)
+                if rolsuper:
+                    finding = "Superuser DBMS (Hanya untuk DBA)"
+                    rec = "BATASI HANYA ADMINISTRATOR"
+                    badge = "pending"
+                elif expired and rolcanlogin:
+                    finding = "Masa Berlaku Habis namun LOGIN Masih Aktif"
+                    rec = "REVOKE LOGIN (ALTER ROLE ... NOLOGIN)"
+                    badge = "rejected"
+                elif expired and not rolcanlogin:
+                    finding = "Akun Uji Kedaluwarsa (Login Dicabut)"
+                    rec = "REVOKE / NONAKTIF TERKENDALI"
+                    badge = "cancelled"
+                else:
+                    finding = "Sesuai Skema Least Privilege"
+                    rec = "MAINTAIN (Pertahankan)"
+                    badge = "active"
+                db_rows.append(
+                    {
+                        "rolname": rolname,
+                        "rolsuper": rolsuper,
+                        "rolcreaterole": rolcreaterole,
+                        "rolcreatedb": rolcreatedb,
+                        "rolcanlogin": rolcanlogin,
+                        "rolvaliduntil": rolvaliduntil,
+                        "finding": finding,
+                        "recommendation": rec,
+                        "badge": badge,
+                    }
+                )
+            for param in (
+                "log_statement",
+                "log_connections",
+                "log_disconnections",
+                "logging_collector",
+            ):
+                cur.execute(f"SHOW {param}")
+                row = cur.fetchone()
+                db_audit_config[param] = row[0] if row else "—"
+    except Exception:
+        pass
+
+    return app_rows, db_rows, db_audit_config
+
+
 @role_required(ROLE_ADMIN)
 def admin_security(request):
-    """Log keamanan lengkap dengan filter."""
+    """Log keamanan lengkap dengan filter + Kontrol Buka Blokir IP/Akun + UAR."""
+    from django.utils import timezone
+
     status_filter = request.GET.get("status") or ""
     type_filter = request.GET.get("event") or ""
 
@@ -638,6 +933,25 @@ def admin_security(request):
 
     paginator = Paginator(events, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
+    uar_app_rows, uar_db_rows, db_audit_config = _build_user_access_review()
+
+    # Kumpulkan daftar IP dari event terbaru + IP lokal untuk memantau status rate-limit
+    recent_ips = list(
+        SecurityEvent.objects.exclude(ip_address__isnull=True)
+        .values_list("ip_address", flat=True)
+        .order_by("-timestamp")[:50]
+    )
+    candidate_ips = []
+    for ip in ["127.0.0.1", ratelimit.client_ip(request)] + recent_ips:
+        if ip and ip not in candidate_ips:
+            candidate_ips.append(ip)
+
+    rate_limit_rows = [ratelimit.ip_status(ip) for ip in candidate_ips[:12]]
+    locked_users = list(
+        User.objects.filter(
+            Q(failed_login_attempts__gt=0) | Q(locked_until__gt=timezone.now())
+        ).order_by("-failed_login_attempts", "username")
+    )
 
     return _admin_render(
         request,
@@ -650,11 +964,58 @@ def admin_security(request):
             "status_choices": SecurityEvent.STATUS_CHOICES,
             "status_filter": status_filter,
             "type_filter": type_filter,
+            "rate_limit_rows": rate_limit_rows,
+            "locked_users": locked_users,
+            "uar_app_rows": uar_app_rows,
+            "uar_db_rows": uar_db_rows,
+            "db_audit_config": db_audit_config,
             "page_range": paginator.get_elided_page_range(
                 page_obj.number, on_each_side=1, on_ends=1
             ),
         },
     )
+
+
+@role_required(ROLE_ADMIN)
+@require_http_methods(["POST"])
+def admin_reset_ratelimit(request):
+    """Buka blokir / reset rate limit IP atau buka kunci akun langsung dari web."""
+    mode = (request.POST.get("mode") or "").strip()
+    ip = (request.POST.get("ip") or "").strip()
+    unlock_user_id = (request.POST.get("unlock_user_id") or "").strip()
+
+    if mode == "all":
+        ratelimit.reset_all()
+        messages.success(
+            request,
+            "Seluruh cache rate limit (registrasi & login semua IP) berhasil direset.",
+        )
+    elif unlock_user_id.isdigit():
+        target = User.objects.filter(pk=int(unlock_user_id)).first()
+        if target:
+            target.failed_login_attempts = 0
+            target.locked_until = None
+            target.save(update_fields=["failed_login_attempts", "locked_until"])
+            ratelimit.reset_ip("127.0.0.1", [target.username, target.email])
+            messages.success(
+                request,
+                f"Kunci akun @{target.username} telah dibuka & percobaan gagal direset ke 0.",
+            )
+        else:
+            messages.error(request, "Akun tidak ditemukan.")
+    elif ip:
+        identifiers = list(User.objects.values_list("username", flat=True)) + list(
+            User.objects.values_list("email", flat=True)
+        )
+        ratelimit.reset_ip(ip, identifiers)
+        messages.success(
+            request,
+            f"Rate limit (registrasi & login) untuk IP {ip} berhasil dihapus.",
+        )
+    else:
+        messages.error(request, "Masukkan alamat IP atau pilih aksi reset.")
+
+    return redirect("accounts:admin_security")
 
 
 @role_required(ROLE_ADMIN)
@@ -735,6 +1096,82 @@ def cashier_dashboard(request):
             "open_orders": open_orders_for_dashboard(),
             "recent_orders": recent_orders(),
             "rental_stats": staff_stats(),
+        },
+    )
+
+
+@role_required(ROLE_CASHIER, ROLE_ADMIN)
+def cashier_customers(request):
+    """Daftar pelanggan penyewa + riwayat kepatuhan (khusus kasir/admin)."""
+    from django.db.models import Prefetch
+    from django.db.models import Count as DjCount
+
+    from rentals.models import RentalOrder
+
+    query = (request.GET.get("q") or "").strip()[:80]
+    tab = request.GET.get("tab") or "all"
+
+    order_qs = RentalOrder.objects.select_related("user").order_by("-created_at")
+    customers = User.objects.filter(rental_orders__isnull=False)
+
+    if query:
+        customers = customers.filter(
+            Q(username__icontains=query)
+            | Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(email__icontains=query)
+            | Q(phone_number__icontains=query)
+            | Q(rental_orders__full_name__icontains=query)
+            | Q(rental_orders__id_card_number__icontains=query)
+            | Q(rental_orders__phone_number__icontains=query)
+            | Q(rental_orders__order_code__icontains=query)
+        ).distinct()
+
+    if tab == "active":
+        customers = customers.filter(
+            rental_orders__status=RentalOrder.Status.DIAMBIL
+        ).distinct()
+    elif tab == "overdue":
+        customers = customers.filter(rental_orders__overdue_days__gt=0).distinct()
+
+    customers = customers.annotate(
+        fine_total=DjCount("rental_orders", filter=Q(rental_orders__total_fine__gt=0))
+    ).prefetch_related(
+        Prefetch("rental_orders", queryset=order_qs, to_attr="order_history")
+    ).order_by("username")
+
+    rows = []
+    for customer in customers:
+        history = customer.order_history
+        latest = history[0] if history else None
+        rows.append(
+            {
+                "user": customer,
+                "latest": latest,
+                "nik": latest.id_card_number if latest else "—",
+                "phone": (latest.phone_number if latest else "")
+                or getattr(customer, "phone_number", "")
+                or "—",
+                "total_done": len(
+                    [o for o in history if o.status == RentalOrder.Status.KEMBALI]
+                ),
+                "active_count": len(
+                    [o for o in history if o.status == RentalOrder.Status.DIAMBIL]
+                ),
+                "overdue_count": len([o for o in history if o.overdue_days > 0]),
+                "history": history,
+            }
+        )
+
+    return render(
+        request,
+        "accounts/cashier_customers.html",
+        {
+            "role": primary_role(request.user),
+            "rows": rows,
+            "query": query,
+            "tab": tab,
+            "total_customers": len(rows),
         },
     )
 

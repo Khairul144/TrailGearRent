@@ -17,6 +17,7 @@
         <p class="rt-sub">Konfirmasi pembayaran, serah terima alat, dan proses pengembalian.</p>
       </div>
       <div class="page-head-actions">
+        <button type="button" class="rt-btn primary" data-open-scan-modal>Scan / Cari Kode Booking</button>
         <a href="{% url 'accounts:cashier_dashboard' %}" class="rt-btn ghost">Dashboard Kasir</a>
         <a href="{% url 'accounts:admin_dashboard' %}" class="rt-btn ghost">Dashboard Admin</a>
       </div>
@@ -70,4 +71,5 @@
 
   </div>
 </main>
+{% include "rentals/_scan_lookup_modal.html" %}
 {% endblock %}

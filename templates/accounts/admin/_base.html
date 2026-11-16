@@ -8,12 +8,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}">
-  <link rel="stylesheet" href="{% static 'css/account.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
-  <link rel="stylesheet" href="{% static 'css/rentals.css' %}">
-  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/rentals.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=3">
 </head>
 <body id="top" data-dash="admin">
 
@@ -245,6 +245,29 @@
       });
       document.addEventListener("click", e => { if (!item.contains(e.target)) close(); });
     })();
+
+    // Toggle lihat / sembunyikan password pada form admin
+    document.querySelectorAll("[data-pass-toggle]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const wrap = btn.closest(".auth-input, .pass-field");
+        const input = wrap ? wrap.querySelector("input") : null;
+        if (!input) return;
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.classList.toggle("is-visible", show);
+        btn.setAttribute("aria-pressed", show ? "true" : "false");
+        btn.setAttribute("aria-label", show ? "Sembunyikan password" : "Tampilkan password");
+        btn.setAttribute("title", show ? "Sembunyikan password" : "Tampilkan password");
+        const eye = btn.querySelector(".icon-eye");
+        const eyeOff = btn.querySelector(".icon-eye-off");
+        if (eye && eyeOff) {
+          eye.hidden = !show;
+          eye.style.display = show ? "block" : "none";
+          eyeOff.hidden = show;
+          eyeOff.style.display = show ? "none" : "block";
+        }
+      });
+    });
   </script>
   {% block admin_scripts %}{% endblock %}
 </body>

@@ -1,0 +1,185 @@
+{% extends "rentals/_base.html" %}
+{% load static %}
+
+{% block title %}Pemeriksaan Pengembalian {{ order.order_code }} — TrailGear Rent{% endblock %}
+
+{% block content %}
+<main class="rt-section">
+  <div class="container">
+
+    <div class="rt-head">
+      <div>
+        <h1 class="rt-title">Pemeriksaan Pengembalian &amp; Serah Terima</h1>
+        <p class="rt-sub">Periksa kondisi fisik barang dan hitung denda sebelum menyelesaikan pesanan.</p>
+      </div>
+      <div class="rt-steps">
+        <span class="on">{{ order.order_code }}</span>
+        <span class="sep">›</span>
+        <span>Pemeriksaan Fisik</span>
+      </div>
+    </div>
+
+    {% if form.errors %}
+      <div class="rt-alert error">
+        Periksa kembali data pengembalian:
+        <ul style="margin:8px 0 0 18px">
+          {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+          {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="rt-grid">
+      <div class="rt-card">
+        <div class="rt-card-head">
+          <span class="rt-card-title">Data Pelanggan &amp; Jadwal</span>
+          <span class="rt-pill {{ order.badge_class }}">{{ order.get_status_display }}</span>
+        </div>
+        <div class="rt-card-body">
+          <div class="rt-meta-grid">
+            <div><div class="k">Nama Pelanggan</div><div class="v">{{ order.full_name }}</div></div>
+            <div><div class="k">NIK KTP</div><div class="v">{{ order.id_card_number }}</div></div>
+            <div><div class="k">No. HP / WhatsApp</div><div class="v">{{ order.phone_number }}</div></div>
+            <div><div class="k">Tanggal Ambil</div><div class="v">{{ order.pickup_plan_date|date:"d M Y" }}</div></div>
+            <div><div class="k">Rencana Kembali</div><div class="v">{{ order.return_plan_date|date:"d M Y" }}</div></div>
+            <div><div class="k">Tanggal Hari Ini</div><div class="v">{{ today|date:"d M Y" }}</div></div>
+          </div>
+
+          <div class="rt-inspect-badge">
+            {% if preview_days > 0 %}
+              <span class="rt-pill inspect-late">Terlambat {{ preview_days }} hari (Denda {{ preview_fine|floatformat:0 }})</span>
+            {% else %}
+              <span class="rt-pill inspect-ontime">Tepat Waktu</span>
+            {% endif %}
+            <span class="rt-muted-note">Dasar denda: Rp {{ daily_rate|floatformat:0 }} / hari</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="rt-summary">
+        <div class="rt-card">
+          <div class="rt-card-head"><span class="rt-card-title">Ringkasan Denda</span></div>
+          <div class="rt-card-body">
+            <div class="rt-sum-line"><span>Denda keterlambatan</span><strong id="sumOverdue">{{ preview_fine|floatformat:0 }}</strong></div>
+            <div class="rt-sum-line"><span>Biaya kerusakan</span><strong id="sumDamage">0</strong></div>
+            <div class="rt-sum-line total"><span>Total tagihan</span><strong id="sumTotal">{{ preview_fine|floatformat:0 }}</strong></div>
+            <div class="rt-info" style="margin-top:12px">
+              Denda dibayar langsung di kasir (tunai atau QRIS) saat serah terima.
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <form method="post" class="rt-card" style="margin-top:24px" id="returnForm"
+          data-daily="{{ daily_rate }}" data-plan="{{ order.return_plan_date|date:'Y-m-d' }}">
+      {% csrf_token %}
+
+      <div class="rt-card-head"><span class="rt-card-title">Checklist Kondisi Barang</span></div>
+      <div class="table-wrap">
+        <table class="rt-table">
+          <thead>
+            <tr>
+              <th>Barang</th>
+              <th class="num">Qty</th>
+              <th>Kondisi Saat Kembali</th>
+              <th class="num">Biaya Ganti Rugi / Perbaikan (Rp)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td>
+                <div class="strong">{{ row.item.product.name }}</div>
+                <small style="color:var(--neutral-500)">{{ row.item.product.category.name }}</small>
+              </td>
+              <td class="num">{{ row.item.quantity }}</td>
+              <td>{{ row.condition_field }}</td>
+              <td class="num">{{ row.damage_field }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="rt-card-body">
+        <div class="rt-form-grid">
+          <div class="rt-field">
+            <label for="{{ form.actual_return_date.id_for_label }}">Tanggal Riil Pengembalian <span class="req">*</span></label>
+            {{ form.actual_return_date }}
+            <span class="hint">Tidak boleh sebelum tanggal ambil atau melebihi hari ini.</span>
+          </div>
+          <div class="rt-field">
+            <label for="{{ form.fine_payment_method.id_for_label }}">Metode Bayar Denda</label>
+            {{ form.fine_payment_method }}
+          </div>
+          <div class="rt-field full">
+            <label for="{{ form.return_notes.id_for_label }}">Catatan Kondisi &amp; Serah Terima</label>
+            {{ form.return_notes }}
+          </div>
+        </div>
+
+        <label class="rt-checkbox" for="{{ form.confirmed.id_for_label }}">
+          {{ form.confirmed }}
+          <span>{{ form.confirmed.label }}</span>
+        </label>
+
+        <div class="rt-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+          <button type="submit" class="rt-btn primary">Konfirmasi Pengembalian Selesai</button>
+          <a href="{% url 'rentals:staff_order_list' %}" class="rt-btn ghost">Batal</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const form = document.getElementById("returnForm");
+    if (!form) return;
+    const daily = parseInt(form.dataset.daily || "0", 10);
+    const plan = new Date(form.dataset.plan + "T00:00:00");
+    const dateInput = document.getElementById("{{ form.actual_return_date.id_for_label }}");
+    const sumOverdue = document.getElementById("sumOverdue");
+    const sumDamage = document.getElementById("sumDamage");
+    const sumTotal = document.getElementById("sumTotal");
+    const fmt = (n) => "Rp " + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const badges = document.querySelectorAll(".rt-inspect-badge .rt-pill");
+
+    function damageSum() {
+      let total = 0;
+      form.querySelectorAll("input[name^='damage_']").forEach((el) => {
+        total += Math.max(0, parseInt(el.value || "0", 10) || 0);
+      });
+      return total;
+    }
+
+    function recalc() {
+      let overdue = 0;
+      if (dateInput && dateInput.value) {
+        const d = new Date(dateInput.value + "T00:00:00");
+        const days = Math.floor((d - plan) / 86400000);
+        overdue = days > 0 ? days * daily : 0;
+      }
+      const damage = damageSum();
+      sumOverdue.textContent = fmt(overdue);
+      sumDamage.textContent = fmt(damage);
+      sumTotal.textContent = fmt(overdue + damage);
+      if (badges.length) {
+        const d = dateInput && dateInput.value ? Math.floor((new Date(dateInput.value + "T00:00:00") - plan) / 86400000) : 0;
+        badges[0].textContent = d > 0 ? `Terlambat ${d} hari (Denda ${fmt(overdue)})` : "Tepat Waktu";
+        badges[0].classList.toggle("inspect-late", d > 0);
+        badges[0].classList.toggle("inspect-ontime", d <= 0);
+      }
+    }
+
+    if (dateInput) dateInput.addEventListener("change", recalc);
+    form.querySelectorAll("input[name^='damage_']").forEach((el) => {
+      el.addEventListener("input", recalc);
+    });
+    recalc();
+  })();
+</script>
+{% endblock %}

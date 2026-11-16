@@ -12,6 +12,12 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("dashboard/admin/", views.admin_dashboard, name="admin_dashboard"),
     path("dashboard/admin/users/", views.admin_users, name="admin_users"),
+    path("dashboard/admin/users/add/", views.admin_user_add, name="admin_user_add"),
+    path(
+        "dashboard/admin/users/<int:user_id>/manage/",
+        views.admin_user_manage,
+        name="admin_user_manage",
+    ),
     path("dashboard/admin/staff/", views.admin_staff, name="admin_staff"),
     path(
         "dashboard/admin/users/<int:user_id>/toggle/",
@@ -22,8 +28,18 @@ urlpatterns = [
     path("dashboard/admin/rentals/", views.admin_rentals, name="admin_rentals"),
     path("dashboard/admin/payments/", views.admin_payments, name="admin_payments"),
     path("dashboard/admin/security/", views.admin_security, name="admin_security"),
+    path(
+        "dashboard/admin/security/reset-ratelimit/",
+        views.admin_reset_ratelimit,
+        name="admin_reset_ratelimit",
+    ),
     path("dashboard/admin/reports/", views.admin_reports, name="admin_reports"),
     path("dashboard/cashier/", views.cashier_dashboard, name="cashier_dashboard"),
+    path(
+        "dashboard/cashier/customers/",
+        views.cashier_customers,
+        name="cashier_customers",
+    ),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("settings/", views.settings_view, name="settings"),
     path("transaction/", views.transaction_list, name="transaction_list"),

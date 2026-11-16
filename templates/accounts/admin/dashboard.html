@@ -10,7 +10,7 @@
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 3-4 3 3 5-7"/></svg>
     Laporan
   </a>
-  <a href="/admin/accounts/user/add/" class="btn-xs primary">
+  <a href="{% url 'accounts:admin_user_add' %}?role=Cashier" class="btn-xs primary">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
     Tambah Staff
   </a>

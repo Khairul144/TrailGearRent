@@ -603,13 +603,44 @@ class StaffActionTests(RentalTestBase):
 
     def test_full_flow_to_return(self):
         order = self.make_order(quantity=2)
+        # Jadwal mundur agar pengembalian hari ini valid (>= tanggal ambil).
+        order.pickup_plan_date = date.today() - timedelta(days=3)
+        order.return_plan_date = date.today()
+        order.save(update_fields=["pickup_plan_date", "return_plan_date"])
         self.client.force_login(self.cashier)
-        for action in ("confirm", "pickup", "return"):
+        for action in ("confirm", "pickup"):
             self.client.post(
                 reverse("rentals:staff_order_action", args=[order.order_code, action])
             )
+
+        # Tombol lama tidak lagi menyelesaikan pesanan; diarahkan ke inspeksi.
+        response = self.client.post(
+            reverse("rentals:staff_order_action", args=[order.order_code, "return"])
+        )
+        self.assertRedirects(
+            response, reverse("rentals:return_inspection", args=[order.order_code])
+        )
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIAMBIL)
+
+        data = {
+            "actual_return_date": date.today().isoformat(),
+            "fine_payment_method": "CASH",
+            "return_notes": "Barang lengkap.",
+            "confirmed": "on",
+        }
+        for item in order.items.all():
+            data[f"condition_{item.pk}"] = "BAIK"
+            data[f"damage_{item.pk}"] = "0"
+        response = self.client.post(
+            reverse("rentals:return_inspection", args=[order.order_code]), data
+        )
+        self.assertEqual(response.status_code, 302)
+
         order.refresh_from_db()
         self.assertEqual(order.status, RentalOrder.Status.KEMBALI)
+        self.assertEqual(order.overdue_days, 0)
+        self.assertEqual(order.total_fine, 0)
         self.product.refresh_from_db()
         self.assertEqual(self.product.available_stock, 3)
 
@@ -917,3 +948,649 @@ class PaymentProofTests(RentalTestBase):
         self.assertEqual(response.status_code, 403)
         self.order.refresh_from_db()
         self.assertFalse(self.order.has_payment_proof())
+
+
+# ---------------------------------------------------------------------------
+# Prioritas 1 — pemeriksaan pengembalian, denda, mutasi stok per kondisi
+# ---------------------------------------------------------------------------
+class ReturnInspectionTests(RentalTestBase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.cashier)
+
+    def make_in_progress_order(self, quantity=2, return_offset=-1, duration=5):
+        cart, _ = Cart.objects.get_or_create(user=self.customer)
+        start = date.today() + timedelta(days=1)
+        services.add_item_to_cart(
+            cart,
+            self.product,
+            start_date=start,
+            duration_days=duration,
+            quantity=quantity,
+        )
+        order = services.create_order_from_cart(
+            cart,
+            self.customer,
+            {
+                "full_name": "Budi Santoso",
+                "phone_number": "081234567890",
+                "id_card_number": "3301234567890001",
+                "id_card_type": "KTP",
+                "pickup_plan_date": start,
+                "return_plan_date": start + timedelta(days=duration + 1),
+                "notes": "",
+            },
+        )
+        # Mundurkan jadwal agar pengembalian "hari ini" valid secara bisnis.
+        order.pickup_plan_date = date.today() - timedelta(days=5)
+        order.return_plan_date = date.today() + timedelta(days=return_offset)
+        order.save(update_fields=["pickup_plan_date", "return_plan_date"])
+        services.set_order_status(order, RentalOrder.Status.DIKONFIRMASI, actor=self.cashier)
+        services.set_order_status(order, RentalOrder.Status.DIAMBIL, actor=self.cashier)
+        return order
+
+    def inspection_url(self, order):
+        return reverse("rentals:return_inspection", args=[order.order_code])
+
+    def payload(self, order, actual=None, condition="BAIK", damage=0, confirmed=True):
+        data = {
+            "actual_return_date": (actual or date.today()).isoformat(),
+            "fine_payment_method": "CASH",
+            "return_notes": "Sudah diperiksa.",
+        }
+        if confirmed:
+            data["confirmed"] = "on"
+        for item in order.items.all():
+            data[f"condition_{item.pk}"] = condition
+            data[f"damage_{item.pk}"] = str(damage)
+        return data
+
+    # ---- denda ---------------------------------------------------------
+    def test_on_time_return_has_zero_fine(self):
+        order = self.make_in_progress_order(quantity=2, return_offset=0)
+        response = self.client.get(self.inspection_url(order))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tepat Waktu")
+
+        response = self.client.post(self.inspection_url(order), self.payload(order))
+        self.assertEqual(response.status_code, 302)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.KEMBALI)
+        self.assertEqual(order.overdue_days, 0)
+        self.assertEqual(order.overdue_fine, 0)
+        self.assertEqual(order.total_fine, 0)
+        self.assertEqual(
+            order.fine_payment_status, RentalOrder.FinePaymentStatus.TIDAK_ADA_DENDA
+        )
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.available_stock, 3)
+
+    def test_two_days_late_calculates_fine_from_daily_rate(self):
+        order = self.make_in_progress_order(quantity=2, return_offset=-2)
+        self.assertEqual(services.LATE_FEE_PER_DAY, 10000)
+
+        response = self.client.post(self.inspection_url(order), self.payload(order))
+        self.assertEqual(response.status_code, 302)
+
+        order.refresh_from_db()
+        self.assertEqual(order.overdue_days, 2)
+        self.assertEqual(order.overdue_fine, 2 * 10000)
+        self.assertEqual(order.total_fine, 20000)
+        self.assertEqual(
+            order.fine_payment_status,
+            RentalOrder.FinePaymentStatus.MENUNGGU_PEMBAYARAN,
+        )
+        self.assertEqual(order.returned_by_staff, self.cashier)
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                event_type=SecurityEvent.RETURN_COMPLETED, status="SUCCESS"
+            ).exists()
+        )
+
+    def test_inspection_page_shows_late_badge(self):
+        order = self.make_in_progress_order(quantity=1, return_offset=-3)
+        response = self.client.get(self.inspection_url(order))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Terlambat 3 hari")
+        self.assertContains(response, order.id_card_number)
+        self.assertContains(response, order.phone_number)
+
+    # ---- mutasi stok per kondisi --------------------------------------
+    def test_good_condition_returns_stock(self):
+        order = self.make_in_progress_order(quantity=2)
+        self.client.post(self.inspection_url(order), self.payload(order, condition="BAIK"))
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.available_stock, 3)
+        self.assertTrue(
+            InventoryLog.objects.filter(
+                action="RETURNED", notes__contains=order.order_code
+            ).exists()
+        )
+
+    def test_dirty_condition_returns_stock_and_records_cleaning_fee(self):
+        order = self.make_in_progress_order(quantity=2, return_offset=0)
+        self.client.post(
+            self.inspection_url(order),
+            self.payload(order, condition="KOTOR", damage=5000),
+        )
+        self.product.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(self.product.available_stock, 3)
+        self.assertEqual(order.damage_fine, 5000)
+        self.assertEqual(order.total_fine, 5000)
+        self.assertEqual(order.items.first().condition_at_return, "KOTOR")
+
+    def test_light_damage_returns_stock(self):
+        order = self.make_in_progress_order(quantity=2)
+        self.client.post(
+            self.inspection_url(order),
+            self.payload(order, condition="RUSAK_RINGAN", damage=10000),
+        )
+        self.product.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(self.product.available_stock, 3)
+        self.assertEqual(order.damage_fine, 10000)
+
+    def test_heavy_damage_does_not_return_stock(self):
+        order = self.make_in_progress_order(quantity=2)
+        self.client.post(
+            self.inspection_url(order),
+            self.payload(order, condition="RUSAK_BERAT", damage=75000),
+        )
+        self.product.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(self.product.available_stock, 1)  # tetap di luar
+        self.assertEqual(self.product.total_stock, 3)
+        self.assertEqual(order.damage_fine, 75000)
+        self.assertTrue(
+            InventoryLog.objects.filter(
+                action="DAMAGED", notes__contains=order.order_code
+            ).exists()
+        )
+
+    def test_lost_item_reduces_total_stock(self):
+        order = self.make_in_progress_order(quantity=2, return_offset=0)
+        self.client.post(
+            self.inspection_url(order),
+            self.payload(order, condition="HILANG", damage=200000),
+        )
+        self.product.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(self.product.total_stock, 1)
+        self.assertEqual(self.product.available_stock, 1)
+        self.assertEqual(order.total_fine, 200000)
+        self.assertTrue(InventoryLog.objects.filter(action="DAMAGED").exists())
+
+    # ---- validasi ------------------------------------------------------
+    def test_return_date_before_pickup_rejected(self):
+        order = self.make_in_progress_order(quantity=1)
+        before_pickup = order.pickup_plan_date - timedelta(days=1)
+        response = self.client.post(
+            self.inspection_url(order), self.payload(order, actual=before_pickup)
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIAMBIL)
+
+    def test_confirmation_checkbox_required(self):
+        order = self.make_in_progress_order(quantity=1)
+        response = self.client.post(
+            self.inspection_url(order), self.payload(order, confirmed=False)
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIAMBIL)
+
+    def test_negative_damage_fee_rejected(self):
+        order = self.make_in_progress_order(quantity=1)
+        response = self.client.post(
+            self.inspection_url(order),
+            self.payload(order, condition="RUSAK_BERAT", damage=-5000),
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIAMBIL)
+
+    # ---- otorisasi -----------------------------------------------------
+    def test_customer_cannot_open_or_post_inspection(self):
+        order = self.make_in_progress_order(quantity=1)
+        self.client.force_login(self.customer)
+        self.assertEqual(self.client.get(self.inspection_url(order)).status_code, 403)
+        self.assertEqual(
+            self.client.post(self.inspection_url(order), self.payload(order)).status_code,
+            403,
+        )
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIAMBIL)
+
+    def test_anonymous_redirected_to_login(self):
+        order = self.make_in_progress_order(quantity=1)
+        self.client.logout()
+        response = self.client.get(self.inspection_url(order))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    # ---- pelunasan denda ----------------------------------------------
+    def test_settle_fine_marks_lunas_and_logs(self):
+        order = self.make_in_progress_order(quantity=1, return_offset=-2)
+        self.client.post(self.inspection_url(order), self.payload(order))
+        order.refresh_from_db()
+        self.assertEqual(
+            order.fine_payment_status, RentalOrder.FinePaymentStatus.MENUNGGU_PEMBAYARAN
+        )
+
+        response = self.client.post(
+            reverse("rentals:settle_fine", args=[order.order_code])
+        )
+        self.assertEqual(response.status_code, 302)
+        order.refresh_from_db()
+        self.assertEqual(order.fine_payment_status, RentalOrder.FinePaymentStatus.LUNAS)
+        self.assertTrue(
+            SecurityEvent.objects.filter(event_type=SecurityEvent.FINE_PAID).exists()
+        )
+
+    def test_customer_cannot_settle_fine(self):
+        order = self.make_in_progress_order(quantity=1, return_offset=-2)
+        self.client.post(self.inspection_url(order), self.payload(order))
+        self.client.force_login(self.customer)
+        response = self.client.post(
+            reverse("rentals:settle_fine", args=[order.order_code])
+        )
+        self.assertEqual(response.status_code, 403)
+
+
+# ---------------------------------------------------------------------------
+# Prioritas 2 — Pembatalan mandiri pelanggan & payload toast AJAX
+# ---------------------------------------------------------------------------
+class CustomerSelfCancelTests(RentalTestBase):
+    def setUp(self):
+        super().setUp()
+        self.other_customer = User.objects.create_user(
+            username="siti_other",
+            email="siti_other@example.com",
+            password="Rahasia#123",
+        )
+        assign_role(self.other_customer, ROLE_CUSTOMER)
+
+    def make_pending_order(self, quantity=1):
+        cart, _ = Cart.objects.get_or_create(user=self.customer)
+        cart.items.all().delete()
+        services.add_item_to_cart(
+            cart, self.product, start_date=TOMORROW, duration_days=2, quantity=quantity
+        )
+        return services.create_order_from_cart(
+            cart,
+            self.customer,
+            {
+                "full_name": "Budi Santoso",
+                "phone_number": "081234567890",
+                "id_card_number": "3301234567890001",
+                "id_card_type": "KTP",
+                "pickup_plan_date": TOMORROW,
+                "return_plan_date": TOMORROW + timedelta(days=3),
+                "notes": "",
+            },
+        )
+
+    def test_owner_can_cancel_pending_order(self):
+        order = self.make_pending_order()
+        self.client.force_login(self.customer)
+        response = self.client.post(
+            reverse("rentals:customer_cancel_order", args=[order.order_code]),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIBATALKAN)
+        self.assertContains(response, f"Pesanan {order.order_code} telah berhasil dibatalkan.")
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                event_type=SecurityEvent.ORDER_CANCELLED,
+                user=self.customer,
+                description__contains=order.order_code,
+            ).exists()
+        )
+
+    def test_cancel_button_visibility_by_status(self):
+        order = self.make_pending_order()
+        self.client.force_login(self.customer)
+
+        detail_pending = self.client.get(
+            reverse("rentals:order_detail", args=[order.order_code])
+        )
+        self.assertContains(detail_pending, "Batalkan Pesanan")
+        self.assertContains(
+            detail_pending,
+            reverse("rentals:customer_cancel_order", args=[order.order_code]),
+        )
+
+        trx_pending = self.client.get(reverse("accounts:transaction_list"))
+        self.assertContains(
+            trx_pending,
+            reverse("rentals:customer_cancel_order", args=[order.order_code]),
+        )
+
+        services.set_order_status(
+            order, RentalOrder.Status.DIKONFIRMASI, actor=self.cashier
+        )
+        detail_confirmed = self.client.get(
+            reverse("rentals:order_detail", args=[order.order_code])
+        )
+        self.assertNotContains(detail_confirmed, "Batalkan Pesanan")
+
+        trx_confirmed = self.client.get(reverse("accounts:transaction_list"))
+        self.assertNotContains(
+            trx_confirmed,
+            reverse("rentals:customer_cancel_order", args=[order.order_code]),
+        )
+
+    def test_owner_cannot_cancel_confirmed_or_picked_up_order(self):
+        order = self.make_pending_order(quantity=2)
+        services.set_order_status(
+            order, RentalOrder.Status.DIKONFIRMASI, actor=self.cashier
+        )
+        self.client.force_login(self.customer)
+
+        response = self.client.post(
+            reverse("rentals:customer_cancel_order", args=[order.order_code]),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIKONFIRMASI)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.available_stock, 1)  # stok tetap terpotong
+        self.assertContains(response, "tidak dapat dibatalkan")
+
+        services.set_order_status(
+            order, RentalOrder.Status.DIAMBIL, actor=self.cashier
+        )
+        self.client.post(
+            reverse("rentals:customer_cancel_order", args=[order.order_code])
+        )
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIAMBIL)
+
+    def test_other_customer_cannot_cancel_idor_blocked(self):
+        order = self.make_pending_order()
+        self.client.force_login(self.other_customer)
+        response = self.client.post(
+            reverse("rentals:customer_cancel_order", args=[order.order_code])
+        )
+        self.assertEqual(response.status_code, 403)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.MENUNGGU_PEMBAYARAN)
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                event_type=SecurityEvent.ACCESS_DENIED,
+                user=self.other_customer,
+                description__contains=order.order_code,
+            ).exists()
+        )
+
+    def test_anonymous_cannot_cancel(self):
+        order = self.make_pending_order()
+        response = self.client.post(
+            reverse("rentals:customer_cancel_order", args=[order.order_code])
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.MENUNGGU_PEMBAYARAN)
+
+    def test_get_method_rejected(self):
+        order = self.make_pending_order()
+        self.client.force_login(self.customer)
+        response = self.client.get(
+            reverse("rentals:customer_cancel_order", args=[order.order_code])
+        )
+        self.assertEqual(response.status_code, 405)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.MENUNGGU_PEMBAYARAN)
+
+    def test_open_redirect_prevented_on_next(self):
+        order = self.make_pending_order()
+        self.client.force_login(self.customer)
+        response = self.client.post(
+            reverse("rentals:customer_cancel_order", args=[order.order_code]),
+            {"next": "https://evil.example.com/phish"},
+        )
+        self.assertRedirects(
+            response,
+            reverse("rentals:order_detail", args=[order.order_code]),
+        )
+
+
+class FloatingToastAjaxTests(RentalTestBase):
+    def test_ajax_add_to_cart_returns_toast_metadata(self):
+        self.client.force_login(self.customer)
+        response = self.client.post(
+            reverse("rentals:add_to_cart", args=[self.product.slug]),
+            {"tgl": TOMORROW.isoformat(), "durasi": 2, "qty": 2},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["product_name"], self.product.name)
+        self.assertEqual(data["quantity"], 2)
+        self.assertEqual(data["duration_days"], 2)
+        self.assertEqual(data["cart_items_count"], 2)
+        self.assertEqual(data["cart_url"], reverse("rentals:cart_detail"))
+        self.assertIn(self.product.name, data["message"])
+
+    def test_toast_script_loaded_on_catalog_and_detail(self):
+        self.client.force_login(self.customer)
+        cat_res = self.client.get(reverse("catalog:product_list"))
+        self.assertContains(cat_res, "assets/js/cart-add.js")
+        det_res = self.client.get(
+            reverse("catalog:product_detail", args=[self.product.slug])
+        )
+        self.assertContains(det_res, "assets/js/cart-add.js")
+        self.assertContains(det_res, "assets/js/catalog.js")
+
+
+class StaffOrderLookupTests(RentalTestBase):
+    """Tes pencarian cepat / scan kode booking di dashboard kasir."""
+
+    def setUp(self):
+        super().setUp()
+        cart, _ = Cart.objects.get_or_create(user=self.customer)
+        services.add_item_to_cart(
+            cart, self.product, start_date=TOMORROW, duration_days=2, quantity=1
+        )
+        self.order = services.create_order_from_cart(
+            cart,
+            self.customer,
+            {
+                "full_name": "Budi Santoso",
+                "phone_number": "081234567890",
+                "id_card_number": "3301234567890099",
+                "id_card_type": "KTP",
+                "pickup_plan_date": TOMORROW,
+                "return_plan_date": TOMORROW + timedelta(days=3),
+                "notes": "",
+            },
+        )
+        services.set_order_status(
+            self.order, RentalOrder.Status.DIKONFIRMASI, actor=self.cashier
+        )
+
+    def test_lookup_by_exact_code_redirects_to_order_detail(self):
+        self.client.force_login(self.cashier)
+        res = self.client.get(
+            reverse("rentals:staff_order_lookup"), {"q": self.order.order_code}
+        )
+        self.assertRedirects(
+            res, reverse("rentals:order_detail", args=[self.order.order_code])
+        )
+
+    def test_lookup_extracts_code_from_qr_url(self):
+        self.client.force_login(self.cashier)
+        qr_payload = f"https://trailgearrent.com/orders/{self.order.order_code}/"
+        res = self.client.get(
+            reverse("rentals:staff_order_lookup"),
+            {"q": qr_payload, "format": "json"},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["order_code"], self.order.order_code)
+        self.assertTrue(data["can_pickup"])
+        self.assertIn(self.order.order_code, data["pickup_url"])
+
+    def test_lookup_by_nik_16_digits(self):
+        self.client.force_login(self.cashier)
+        res = self.client.get(
+            reverse("rentals:staff_order_lookup"),
+            {"q": "3301234567890099", "format": "json"},
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["order_code"], self.order.order_code)
+
+    def test_lookup_not_found_returns_404_json(self):
+        self.client.force_login(self.cashier)
+        res = self.client.get(
+            reverse("rentals:staff_order_lookup"),
+            {"q": "TG-99999999-ZZZZ", "format": "json"},
+        )
+        self.assertEqual(res.status_code, 404)
+        self.assertFalse(res.json()["ok"])
+
+    def test_customer_and_anonymous_blocked_from_lookup(self):
+        res_anon = self.client.get(
+            reverse("rentals:staff_order_lookup"), {"q": self.order.order_code}
+        )
+        self.assertEqual(res_anon.status_code, 302)
+        self.assertIn("/login/", res_anon.url)
+
+        self.client.force_login(self.customer)
+        res_cust = self.client.get(
+            reverse("rentals:staff_order_lookup"), {"q": self.order.order_code}
+        )
+        self.assertEqual(res_cust.status_code, 403)
+
+    def test_cashier_dashboard_includes_scan_modal(self):
+        self.client.force_login(self.cashier)
+        res = self.client.get(reverse("accounts:cashier_dashboard"))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'id="scanLookupModal"')
+        self.assertContains(res, reverse("rentals:staff_order_lookup"))
+
+
+class MakerCheckerSeparationTests(RentalTestBase):
+    """Pengujian pemisahan role Maker-Checker & pencegahan Self-Approval."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from accounts.roles import ROLE_ADMIN, assign_role
+
+        cls.checker_admin = User.objects.create_user(
+            username="checker_admin_mc",
+            email="checker_admin_mc@example.com",
+            password="ValidPass#2026",
+            is_staff=True,
+        )
+        assign_role(cls.checker_admin, ROLE_ADMIN)
+
+    def test_maker_cannot_confirm_own_order_even_if_staff(self):
+        # Kasir membuat pesanan untuk dirinya sendiri (Maker = self.cashier)
+        order = self.make_order(user=self.cashier, quantity=1)
+        self.client.force_login(self.cashier)
+        res = self.client.post(
+            reverse("rentals:staff_order_action", args=[order.order_code, "confirm"])
+        )
+        self.assertEqual(res.status_code, 302)
+        order.refresh_from_db()
+        # Status tidak boleh berubah menjadi DIKONFIRMASI
+        self.assertEqual(order.status, RentalOrder.Status.MENUNGGU_PEMBAYARAN)
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.cashier,
+                event_type=SecurityEvent.MAKER_CHECKER_VIOLATION,
+                status=SecurityEvent.STATUS_BLOCKED,
+            ).exists()
+        )
+
+    def test_different_checker_can_confirm_order_and_logs_approval(self):
+        # Maker = self.cashier, Checker = self.checker_admin (berbeda akun)
+        order = self.make_order(user=self.cashier, quantity=1)
+        self.client.force_login(self.checker_admin)
+        res = self.client.post(
+            reverse("rentals:staff_order_action", args=[order.order_code, "confirm"])
+        )
+        self.assertEqual(res.status_code, 302)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIKONFIRMASI)
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.checker_admin,
+                event_type=SecurityEvent.ORDER_APPROVED,
+                status=SecurityEvent.STATUS_SUCCESS,
+            ).exists()
+        )
+
+    def test_maker_cannot_complete_return_on_own_order(self):
+        order = self.make_order(user=self.cashier, quantity=1)
+        order.pickup_plan_date = date.today() - timedelta(days=2)
+        order.return_plan_date = date.today()
+        order.save(update_fields=["pickup_plan_date", "return_plan_date"])
+        # Disetujui & diserahkan oleh Checker berbeda (checker_admin)
+        services.set_order_status(
+            order, RentalOrder.Status.DIKONFIRMASI, actor=self.checker_admin
+        )
+        services.set_order_status(
+            order, RentalOrder.Status.DIAMBIL, actor=self.checker_admin
+        )
+
+        # Maker (cashier) mencoba memproses pengembalian pesanannya sendiri -> DITOLAK
+        self.client.force_login(self.cashier)
+        data = {
+            "actual_return_date": date.today().isoformat(),
+            "fine_payment_method": "CASH",
+            "return_notes": "Self return attempt",
+            "confirmed": "on",
+        }
+        for item in order.items.all():
+            data[f"condition_{item.pk}"] = "BAIK"
+            data[f"damage_{item.pk}"] = "0"
+        res = self.client.post(
+            reverse("rentals:return_inspection", args=[order.order_code]), data
+        )
+        self.assertEqual(res.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RentalOrder.Status.DIAMBIL)
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.cashier,
+                event_type=SecurityEvent.MAKER_CHECKER_VIOLATION,
+                status=SecurityEvent.STATUS_BLOCKED,
+            ).exists()
+        )
+
+    def test_maker_cannot_settle_fine_on_own_order(self):
+        order = self.make_order(user=self.cashier, quantity=1)
+        order.status = RentalOrder.Status.KEMBALI
+        order.total_fine = 20000
+        order.fine_payment_status = RentalOrder.FinePaymentStatus.MENUNGGU_PEMBAYARAN
+        order.save(update_fields=["status", "total_fine", "fine_payment_status"])
+
+        self.client.force_login(self.cashier)
+        res = self.client.post(
+            reverse("rentals:settle_fine", args=[order.order_code])
+        )
+        self.assertEqual(res.status_code, 302)
+        order.refresh_from_db()
+        self.assertEqual(
+            order.fine_payment_status,
+            RentalOrder.FinePaymentStatus.MENUNGGU_PEMBAYARAN,
+        )
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.cashier,
+                event_type=SecurityEvent.MAKER_CHECKER_VIOLATION,
+                status=SecurityEvent.STATUS_BLOCKED,
+            ).exists()
+        )
+

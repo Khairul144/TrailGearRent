@@ -1,0 +1,158 @@
+-- 1. Cabut hak CREATE default pada schema public dari PUBLIC
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+REVOKE
+GRANT USAGE ON SCHEMA public TO PUBLIC;
+GRANT
+-- 2. Buat 3 Role Grup berbasis Least Privilege (NOLOGIN)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'role_customer_db') THEN
+        CREATE ROLE role_customer_db NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'role_kasir_db') THEN
+        CREATE ROLE role_kasir_db NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'role_auditor_db') THEN
+        CREATE ROLE role_auditor_db NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;
+    END IF;
+END
+$$;
+DO
+-- Reset privilege lama agar idempoten
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM role_customer_db, role_kasir_db, role_auditor_db;
+REVOKE
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM role_customer_db, role_kasir_db, role_auditor_db;
+REVOKE
+-- 3A. Privilege Minimum untuk role_customer_db (Maker: baca katalog & buat pesanan)
+GRANT SELECT ON TABLE catalog_category, catalog_product TO role_customer_db;
+GRANT
+GRANT SELECT, INSERT ON TABLE rentals_cart, rentals_cart_item, rentals_rental_order, rentals_rental_order_item TO role_customer_db;
+GRANT
+GRANT USAGE, SELECT ON SEQUENCE rentals_cart_id_seq, rentals_cart_item_id_seq, rentals_rental_order_id_seq, rentals_rental_order_item_id_seq TO role_customer_db;
+GRANT
+-- 3B. Privilege Minimum untuk role_kasir_db (Checker: verifikasi pesanan, mutasi stok, log inventaris, profil non-password)
+GRANT SELECT ON TABLE catalog_category, catalog_product TO role_kasir_db;
+GRANT
+GRANT SELECT (id, username, first_name, last_name, email, phone_number, is_active) ON TABLE accounts_user TO role_kasir_db;
+GRANT
+GRANT UPDATE (available_stock, updated_at) ON TABLE catalog_product TO role_kasir_db;
+GRANT
+GRANT SELECT, UPDATE (
+    status, stock_deducted, actual_return_date, overdue_days,
+    overdue_fine, damage_fine, total_fine, fine_payment_status,
+    return_notes, returned_by_staff_id, updated_at
+) ON TABLE rentals_rental_order TO role_kasir_db;
+GRANT
+GRANT SELECT, UPDATE (condition_at_return, item_damage_fee) ON TABLE rentals_rental_order_item TO role_kasir_db;
+GRANT
+GRANT SELECT, INSERT ON TABLE catalog_inventory_log, accounts_securityevent TO role_kasir_db;
+GRANT
+GRANT USAGE, SELECT ON SEQUENCE catalog_inventory_log_id_seq, accounts_securityevent_id_seq TO role_kasir_db;
+GRANT
+-- 3C. Privilege Minimum untuk role_auditor_db (Read-Only Audit, TANPA kolom password hash)
+GRANT SELECT ON TABLE
+    accounts_securityevent,
+    catalog_inventory_log,
+    rentals_rental_order,
+    rentals_rental_order_item,
+    catalog_category,
+    catalog_product,
+    auth_group,
+    accounts_user_groups
+TO role_auditor_db;
+GRANT
+GRANT SELECT (
+    id, username, email, first_name, last_name, phone_number,
+    is_active, is_staff, is_superuser, last_login, date_joined,
+    failed_login_attempts, locked_until, password_changed_at
+) ON TABLE accounts_user TO role_auditor_db;
+GRANT
+-- 4. Tampilkan ringkasan matriks privilege tabel untuk ketiga role
+SELECT grantee, table_name, string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
+FROM information_schema.role_table_grants
+WHERE grantee IN ('role_customer_db', 'role_kasir_db', 'role_auditor_db')
+GROUP BY grantee, table_name
+ORDER BY grantee, table_name;
+     grantee      |        table_name         |   privileges   
+------------------+---------------------------+----------------
+ role_auditor_db  | accounts_securityevent    | SELECT
+ role_auditor_db  | accounts_user_groups      | SELECT
+ role_auditor_db  | auth_group                | SELECT
+ role_auditor_db  | catalog_category          | SELECT
+ role_auditor_db  | catalog_inventory_log     | SELECT
+ role_auditor_db  | catalog_product           | SELECT
+ role_auditor_db  | rentals_rental_order      | SELECT
+ role_auditor_db  | rentals_rental_order_item | SELECT
+ role_customer_db | catalog_category          | SELECT
+ role_customer_db | catalog_product           | SELECT
+ role_customer_db | rentals_cart              | INSERT, SELECT
+ role_customer_db | rentals_cart_item         | INSERT, SELECT
+ role_customer_db | rentals_rental_order      | INSERT, SELECT
+ role_customer_db | rentals_rental_order_item | INSERT, SELECT
+ role_kasir_db    | accounts_securityevent    | INSERT, SELECT
+ role_kasir_db    | catalog_category          | SELECT
+ role_kasir_db    | catalog_inventory_log     | INSERT, SELECT
+ role_kasir_db    | catalog_product           | SELECT
+ role_kasir_db    | rentals_rental_order      | SELECT
+ role_kasir_db    | rentals_rental_order_item | SELECT
+(20 rows)
+
+-- 5. Pengujian Pelanggaran Least Privilege
+-- 5a. Uji role_customer_db: Boleh SELECT katalog, tetapi DITOLAK saat membaca log keamanan atau menghapus produk
+SET ROLE role_customer_db;
+SET
+SELECT current_user, session_user;
+   current_user   | session_user 
+------------------+--------------
+ role_customer_db | postgres
+(1 row)
+
+SELECT count(*) AS jumlah_produk_katalog FROM catalog_product;
+ jumlah_produk_katalog 
+-----------------------
+                   156
+(1 row)
+
+SELECT count(*) FROM accounts_securityevent;
+ERROR:  permission denied for table accounts_securityevent
+DELETE FROM catalog_product WHERE id = 1;
+ERROR:  permission denied for table catalog_product
+RESET ROLE;
+RESET
+-- 5b. Uji role_kasir_db: Boleh melihat produk, tetapi DITOLAK saat mengubah harga sewa atau menghapus audit log
+SET ROLE role_kasir_db;
+SET
+SELECT current_user;
+ current_user  
+---------------
+ role_kasir_db
+(1 row)
+
+UPDATE catalog_product SET price_per_day = 1000 WHERE id = 1;
+ERROR:  permission denied for table catalog_product
+DELETE FROM accounts_securityevent;
+ERROR:  permission denied for table accounts_securityevent
+RESET ROLE;
+RESET
+-- 5c. Uji role_auditor_db: Boleh membaca data non-sensitif user, tetapi DITOLAK saat membaca kolom password hash atau mengubah data
+SET ROLE role_auditor_db;
+SET
+SELECT current_user;
+  current_user   
+-----------------
+ role_auditor_db
+(1 row)
+
+SELECT id, username, is_active, is_staff FROM accounts_user ORDER BY id LIMIT 5;
+ id | username | is_active | is_staff 
+----+----------+-----------+----------
+  3 | admin1   | t         | t
+  4 | kasir1   | t         | f
+(2 rows)
+
+SELECT username, password FROM accounts_user LIMIT 1;
+ERROR:  permission denied for table accounts_user
+DELETE FROM accounts_securityevent;
+ERROR:  permission denied for table accounts_securityevent
+RESET ROLE;
+RESET

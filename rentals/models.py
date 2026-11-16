@@ -209,6 +209,11 @@ class RentalOrder(models.Model):
         QRIS = "QRIS", "QRIS TrailGear"
         CASH = "CASH", "Tunai di Toko (COD)"
 
+    class FinePaymentStatus(models.TextChoices):
+        TIDAK_ADA_DENDA = "TIDAK_ADA_DENDA", "Tidak Ada Denda"
+        MENUNGGU_PEMBAYARAN = "MENUNGGU_PEMBAYARAN", "Menunggu Pembayaran"
+        LUNAS = "LUNAS", "Lunas"
+
     order_code = models.CharField(
         max_length=32,
         unique=True,
@@ -261,6 +266,45 @@ class RentalOrder(models.Model):
         blank=True,
         verbose_name="Waktu Unggah Bukti",
     )
+
+    # ---- Hasil pemeriksaan pengembalian --------------------------------
+    actual_return_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Tanggal Riil Pengembalian",
+    )
+    overdue_days = models.PositiveIntegerField(
+        default=0, verbose_name="Hari Keterlambatan"
+    )
+    overdue_fine = models.PositiveIntegerField(
+        default=0, verbose_name="Denda Keterlambatan (Rp)"
+    )
+    damage_fine = models.PositiveIntegerField(
+        default=0, verbose_name="Biaya Kerusakan (Rp)"
+    )
+    total_fine = models.PositiveIntegerField(
+        default=0, verbose_name="Total Denda (Rp)"
+    )
+    fine_payment_status = models.CharField(
+        max_length=30,
+        choices=FinePaymentStatus.choices,
+        default=FinePaymentStatus.TIDAK_ADA_DENDA,
+        verbose_name="Status Pembayaran Denda",
+    )
+    return_notes = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Catatan Pengembalian",
+    )
+    returned_by_staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="processed_returns",
+        verbose_name="Diproses Oleh",
+    )
+
     stock_deducted = models.BooleanField(
         default=False,
         verbose_name="Stok Sudah Dikurangi",
@@ -319,6 +363,11 @@ class RentalOrder(models.Model):
             self.Status.MENUNGGU_PEMBAYARAN,
             self.Status.DIKONFIRMASI,
         }
+
+    @property
+    def can_customer_cancel(self) -> bool:
+        """Pelanggan hanya boleh membatalkan mandiri saat status masih Menunggu Pembayaran."""
+        return self.status == self.Status.MENUNGGU_PEMBAYARAN
 
     # ---- Bukti pembayaran ---------------------------------------------
     def has_payment_proof(self) -> bool:
@@ -387,6 +436,36 @@ class RentalOrder(models.Model):
     def formatted_grand_total(self) -> str:
         return rupiah(self.grand_total)
 
+    # ---- Denda & pengembalian -----------------------------------------
+    @property
+    def daily_rental_rate(self) -> int:
+        """Total biaya sewa per hari (dasar perhitungan denda keterlambatan)."""
+        return sum(item.unit_price * item.quantity for item in self.items.all())
+
+    @property
+    def has_fine(self) -> bool:
+        return self.total_fine > 0
+
+    @property
+    def formatted_overdue_fine(self) -> str:
+        return rupiah(self.overdue_fine)
+
+    @property
+    def formatted_damage_fine(self) -> str:
+        return rupiah(self.damage_fine)
+
+    @property
+    def formatted_total_fine(self) -> str:
+        return rupiah(self.total_fine)
+
+    @property
+    def fine_badge_class(self) -> str:
+        if self.fine_payment_status == self.FinePaymentStatus.LUNAS:
+            return "paid"
+        if self.fine_payment_status == self.FinePaymentStatus.MENUNGGU_PEMBAYARAN:
+            return "pending"
+        return "returned"
+
     def get_absolute_url(self):
         return reverse("rentals:order_detail", kwargs={"order_code": self.order_code})
 
@@ -409,6 +488,13 @@ class RentalOrder(models.Model):
 class RentalOrderItem(models.Model):
     """Baris barang pada pesanan sewa (harga dibekukan saat checkout)."""
 
+    class Condition(models.TextChoices):
+        BAIK = "BAIK", "Kondisi Baik"
+        KOTOR = "KOTOR", "Kotor / Perlu Cuci"
+        RUSAK_RINGAN = "RUSAK_RINGAN", "Rusak Ringan"
+        RUSAK_BERAT = "RUSAK_BERAT", "Rusak Berat"
+        HILANG = "HILANG", "Hilang"
+
     order = models.ForeignKey(
         RentalOrder,
         on_delete=models.CASCADE,
@@ -426,6 +512,15 @@ class RentalOrderItem(models.Model):
     duration_days = models.PositiveIntegerField(default=1, verbose_name="Durasi (hari)")
     subtotal = models.PositiveIntegerField(
         default=0, verbose_name="Subtotal Biaya Sewa (Rp)"
+    )
+    condition_at_return = models.CharField(
+        max_length=20,
+        choices=Condition.choices,
+        default=Condition.BAIK,
+        verbose_name="Kondisi Saat Kembali",
+    )
+    item_damage_fee = models.PositiveIntegerField(
+        default=0, verbose_name="Biaya Kerusakan Item (Rp)"
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

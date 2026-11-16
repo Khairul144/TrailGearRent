@@ -156,6 +156,65 @@
   box-shadow: 0 0 0 3px rgba(112, 244, 109, 0.15);
 }
 .auth-input input.input-error { border-color: #e53935; }
+.auth-input.has-pass-toggle input { padding-right: 45px; }
+
+/* Sembunyikan tombol reveal bawaan MS Edge/IE agar tidak dobel */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+}
+
+/* Wrapper input password pada halaman Pengaturan */
+.pass-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.pass-field input {
+  width: 100%;
+  padding-right: 44px !important;
+}
+
+/* Tombol Lihat / Sembunyikan Password — menyatu dengan kolom yang sudah ada */
+.pass-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: none;
+  color: var(--neutral-400, #8e8e8e);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  transition: color .18s ease;
+  z-index: 2;
+}
+.pass-toggle:hover {
+  color: var(--neutral-500, #555555);
+}
+.pass-toggle:focus {
+  outline: none;
+}
+.pass-toggle:focus-visible {
+  color: var(--black, #101010);
+}
+.pass-toggle svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  flex-shrink: 0;
+  display: block;
+}
+.pass-toggle svg[hidden] {
+  display: none !important;
+}
 
 .box-remember-forgot {
   display: flex;

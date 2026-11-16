@@ -1060,3 +1060,217 @@
     text-decoration: none !important;
   }
 }
+
+/* ============================================================
+   Prioritas 1 — Pemeriksaan pengembalian, denda, pelanggan
+   ============================================================ */
+.rt-inspect-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+.rt-pill.inspect-ontime { background: #d8f4db; color: #1b5e20; font-size: 13px; }
+.rt-pill.inspect-late { background: #fdecea; color: #b71c1c; font-size: 13px; }
+.rt-muted-note { font-size: 12.5px; color: var(--neutral-500); }
+
+.rt-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px dashed var(--brand-darken);
+  border-radius: 10px;
+  background: #f6fdf6;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.rt-checkbox input { margin-top: 3px; width: 16px; height: 16px; }
+
+.rt-fine-note {
+  display: inline-block;
+  font-size: 11.5px;
+  color: #8a6100;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Riwayat rental di halaman pelanggan kasir */
+.rt-history summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--brand-dark);
+  white-space: nowrap;
+}
+.rt-history summary:hover { text-decoration: underline; }
+.rt-history[open] summary { margin-bottom: 8px; }
+.rt-history-body {
+  min-width: 320px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #fcfdfc;
+}
+.rt-history-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--neutral-100);
+  font-size: 12.5px;
+}
+.rt-history-row:last-child { border-bottom: 0; }
+.rt-history-row .mono { font-weight: 800; }
+.rt-history-row small { display: block; color: var(--neutral-500); }
+
+/* Tab berbentuk link (halaman pelanggan kasir) */
+.dash-tabs a {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--black);
+  text-decoration: none;
+}
+.dash-tabs a:hover { border-color: var(--neutral-400); }
+.dash-tabs a.active { background: var(--brand); border-color: var(--brand-darken); font-weight: 800; }
+
+.rt-receipt-actions form { margin: 0; }
+
+.rt-btn.danger {
+  background: #fff1f0;
+  border-color: #ffa39e;
+  color: #c62828;
+}
+.rt-btn.danger:hover {
+  background: #ffccc7;
+  border-color: #ff7875;
+  color: #a8071a;
+}
+
+/* Modal Scan / Pencarian Cepat Kode Booking Kasir */
+.rt-scan-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3200;
+  background: rgba(16, 24, 16, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.rt-scan-overlay[hidden] {
+  display: none !important;
+}
+.rt-scan-card {
+  width: 100%;
+  max-width: 620px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+  padding: 24px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.rt-scan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.rt-scan-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--black);
+  margin: 0 0 4px;
+}
+.rt-scan-sub {
+  font-size: 13.5px;
+  color: var(--neutral-500);
+  margin: 0;
+}
+.rt-scan-close {
+  border: 0;
+  background: var(--neutral-100);
+  color: var(--black);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.rt-scan-close:hover {
+  background: #e5e7eb;
+}
+.rt-scan-input-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rt-scan-input-row input {
+  flex: 1 1 280px;
+  padding: 13px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--black);
+  outline: none;
+}
+.rt-scan-input-row input:focus {
+  border-color: var(--brand-darken);
+  box-shadow: 0 0 0 3px rgba(112, 244, 109, 0.2);
+}
+.rt-scan-result {
+  margin-top: 18px;
+}
+.rt-scan-found {
+  border: 1px solid #cdeccd;
+  background: #fbfdfb;
+  border-radius: 12px;
+  padding: 16px;
+}
+.rt-scan-found-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+  font-size: 16px;
+}
+.rt-scan-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+.rt-scan-actions form {
+  margin: 0;
+}
+
+@media print {
+  .rt-return-summary { break-inside: avoid; }
+  .rt-scan-overlay { display: none !important; }
+}

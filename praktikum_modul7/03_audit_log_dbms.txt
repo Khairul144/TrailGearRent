@@ -1,0 +1,119 @@
+-- 1. Cek konfigurasi Audit Log SEBELUM diaktifkan
+SHOW log_statement;
+ log_statement 
+---------------
+ none
+(1 row)
+
+SHOW log_connections;
+ log_connections 
+-----------------
+ off
+(1 row)
+
+SHOW log_disconnections;
+ log_disconnections 
+--------------------
+ off
+(1 row)
+
+SHOW logging_collector;
+ logging_collector 
+-------------------
+ on
+(1 row)
+
+-- 2. Aktifkan Audit Log DBMS untuk koneksi, diskoneksi, dan seluruh modifikasi (DDL & DML)
+ALTER SYSTEM SET log_statement = 'mod';
+ALTER SYSTEM
+ALTER SYSTEM SET log_connections = 'on';
+ALTER SYSTEM
+ALTER SYSTEM SET log_disconnections = 'on';
+ALTER SYSTEM
+SELECT pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+-- 3. Verifikasi konfigurasi Audit Log SESUDAH pg_reload_conf()
+SHOW log_statement;
+ log_statement 
+---------------
+ mod
+(1 row)
+
+SHOW log_connections;
+ log_connections 
+-----------------
+ on
+(1 row)
+
+SHOW log_disconnections;
+ log_disconnections 
+--------------------
+ on
+(1 row)
+
+SHOW logging_collector;
+ logging_collector 
+-------------------
+ on
+(1 row)
+
+-- 4. Cuplikan File Audit Log PostgreSQL (postgresql-2026-11-16_000000.log):
+	AS $$
+	BEGIN
+	    -- Cegah pembuat pesanan (user_id) memproses/menyelesaikan pengembalian pesanannya sendiri
+	    IF NEW.returned_by_staff_id IS NOT NULL
+	       AND NEW.user_id IS NOT NULL
+	       AND NEW.returned_by_staff_id = NEW.user_id THEN
+	        RAISE EXCEPTION 'Maker-Checker Violation: Pembuat pesanan (user_id=%) tidak diizinkan memverifikasi/menyelesaikan pesanannya sendiri (returned_by_staff_id=%).',
+	            NEW.user_id, NEW.returned_by_staff_id
+	            USING ERRCODE = '42501';
+	    END IF;
+	    RETURN NEW;
+	END;
+	$$;
+2026-11-16 11:07:49 +07 LOG:  perintah: DROP TRIGGER IF EXISTS trg_enforce_maker_checker_order ON rentals_rental_order;
+2026-11-16 11:07:49 +07 LOG:  perintah: CREATE TRIGGER trg_enforce_maker_checker_order
+	BEFORE INSERT OR UPDATE ON rentals_rental_order
+	FOR EACH ROW
+	EXECUTE FUNCTION fn_enforce_maker_checker_order();
+2026-11-16 11:07:49 +07 LOG:  perintah: DELETE FROM rentals_rental_order WHERE order_code = 'TG-20261116-MC01';
+2026-11-16 11:07:49 +07 LOG:  perintah: INSERT INTO rentals_rental_order (
+	    order_code, user_id, full_name, phone_number, id_card_number, id_card_type,
+	    pickup_plan_date, return_plan_date, status, total_rental_fee, grand_total,
+	    payment_method, payment_proof, notes, stock_deducted,
+	    overdue_days, overdue_fine, damage_fine, total_fine, fine_payment_status,
+	    return_notes, created_at, updated_at
+	)
+	SELECT
+	    'TG-20261116-MC01', id, 'Uji Maker', '081234567890', '3201010101010001', 'KTP',
+	    CURRENT_DATE, CURRENT_DATE + 2, 'MENUNGGU_PEMBAYARAN', 50000, 50000,
+	    'TRANSFER_BCA', '', 'Simulasi Maker-Checker', false,
+	    0, 0, 0, 0, 'TIDAK_ADA_DENDA', '', NOW(), NOW()
+	FROM accounts_user WHERE username = 'admin1';
+2026-11-16 11:07:49 +07 LOG:  perintah: UPDATE rentals_rental_order
+	SET status = 'DIKONFIRMASI'
+	WHERE order_code = 'TG-20261116-MC01';
+2026-11-16 11:07:49 +07 ERROR:  permission denied for table rentals_rental_order
+2026-11-16 11:07:49 +07 PERNYATAAN:  UPDATE rentals_rental_order
+	SET status = 'DIKONFIRMASI'
+	WHERE order_code = 'TG-20261116-MC01';
+2026-11-16 11:07:49 +07 LOG:  perintah: UPDATE rentals_rental_order
+	SET status = 'KEMBALI',
+	    returned_by_staff_id = user_id
+	WHERE order_code = 'TG-20261116-MC01';
+2026-11-16 11:07:49 +07 ERROR:  Maker-Checker Violation: Pembuat pesanan (user_id=3) tidak diizinkan memverifikasi/menyelesaikan pesanannya sendiri (returned_by_staff_id=3).
+2026-11-16 11:07:49 +07 KONTEKS:  PL/pgSQL function fn_enforce_maker_checker_order() line 7 at RAISE
+2026-11-16 11:07:49 +07 PERNYATAAN:  UPDATE rentals_rental_order
+	SET status = 'KEMBALI',
+	    returned_by_staff_id = user_id
+	WHERE order_code = 'TG-20261116-MC01';
+2026-11-16 11:07:49 +07 LOG:  perintah: UPDATE rentals_rental_order
+	SET status = 'DIKONFIRMASI',
+	    returned_by_staff_id = (SELECT id FROM accounts_user WHERE username = 'kasir1')
+	WHERE order_code = 'TG-20261116-MC01';
+2026-11-16 11:07:49 +07 LOG:  perintah: DELETE FROM rentals_rental_order WHERE order_code = 'TG-20261116-MC01';
+2026-11-16 11:07:49 +07 LOG:  pemutusan koneksi: sesi waktu: 0:00:00.043 pengguna=postgres database=TrailGear_auth host=127.0.0.1 port=61733

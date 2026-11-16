@@ -1,0 +1,262 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pelanggan — Dashboard Kasir TrailGear</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/rentals.css' %}">
+</head>
+<body id="top" data-dash="kasir">
+
+  <div class="top-bar">
+    <div class="container top-bar-inner">
+      <div class="top-left">
+        <a href="mailto:halo@trailgearrent.com" class="top-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          halo@trailgearrent.com
+        </a>
+      </div>
+      <div class="top-right">
+        <span class="top-note">Area Operasional — <strong class="text-brand">Kasir</strong></span>
+        <a href="/" class="btn-pill">Lihat Toko
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <header class="header header-solid" id="header">
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <img src="{% static 'assets/img/logo/logo_navbar_white.png' %}?v=2" alt="TrailGear Rent" class="logo-img">
+        <span class="logo-text">TrailGear<span class="logo-accent">Rent</span></span>
+      </a>
+      <nav class="main-nav" id="mainNav">
+        <ul>
+          <li><a href="/" class="nav-link">Beranda</a></li>
+          <li><a href="{% url 'catalog:product_list' %}" class="nav-link">Katalog</a></li>
+          <li><a href="{% url 'rentals:staff_order_list' %}" class="nav-link">Pesanan</a></li>
+        </ul>
+      </nav>
+      <div class="header-right">
+        <div class="account-menu" id="accountItem">
+          <button class="account-toggle" id="accountToggle" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar-circle">{{ user.username|first|upper }}</span>
+            <span class="account-name">{{ user.username }}<span class="role-chip">{{ role|default:"Kasir" }}</span></span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <ul class="account-dropdown" id="accountMenu">
+            <li><a href="{% url 'accounts:settings' %}">Pengaturan</a></li>
+            <li class="divider"></li>
+            <li>
+              <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="logout">Logout</button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="container">
+      <div class="dash-mobile-bar">
+        <button class="dash-toggle" id="dashToggle" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Menu Dashboard
+        </button>
+      </div>
+
+      <div class="dash-grid">
+        <aside class="dash-side" id="dashSide">
+          <div class="dash-user">
+            <span class="avatar-circle">{{ user.username|first|upper }}</span>
+            <div>
+              <div class="dash-user-name">{{ user.display_name }}</div>
+              <div class="dash-user-mail">{{ role|default:"Kasir" }} &bull; {{ user.email }}</div>
+            </div>
+          </div>
+          <nav class="dash-nav">
+            <a href="{% url 'accounts:cashier_dashboard' %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Dashboard
+            </a>
+            <a href="{% url 'rentals:staff_order_list' %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+              Transaksi
+            </a>
+            <a href="{% url 'rentals:staff_order_list' %}?status=MENUNGGU_PEMBAYARAN">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              Pembayaran
+            </a>
+            <a href="{% url 'rentals:staff_order_list' %}?status=DIKONFIRMASI">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><path d="M3 8h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Z"/><path d="M12 12v4M10 14h4"/></svg>
+              Pengambilan
+            </a>
+            <a href="{% url 'rentals:staff_order_list' %}?status=DIAMBIL">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+              Pengembalian
+            </a>
+            <a href="{% url 'accounts:cashier_customers' %}" class="active">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Pelanggan
+            </a>
+            <form method="post" action="{% url 'accounts:logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="logout">Keluar</button>
+            </form>
+          </nav>
+        </aside>
+
+        <section class="dash-content">
+          <div class="page-head">
+            <div>
+              <h1 class="dash-title">Pelanggan</h1>
+              <p class="dash-sub" style="margin-bottom:0;">Data penyewa, riwayat sewa, dan kepatuhan pengembalian.</p>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:0">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Daftar Pelanggan</div>
+                <div class="panel-sub">{{ total_customers }} pelanggan</div>
+              </div>
+            </div>
+
+            <form class="adm-filters" method="get" action="{% url 'accounts:cashier_customers' %}">
+              <div class="adm-field grow">
+                <label for="cq">Cari</label>
+                <input type="text" id="cq" name="q" value="{{ query }}"
+                       placeholder="Nama, username, NIK KTP, atau nomor WhatsApp">
+              </div>
+              <input type="hidden" name="tab" value="{{ tab }}">
+              <button type="submit" class="btn-xs primary">Cari</button>
+              {% if query %}<a href="{% url 'accounts:cashier_customers' %}?tab={{ tab }}" class="adm-reset">Reset</a>{% endif %}
+            </form>
+
+            <div class="panel-body" style="padding:14px 20px 0">
+              <div class="dash-tabs">
+                <a class="{% if tab == 'all' %}active{% endif %}" href="?tab=all{% if query %}&q={{ query|urlencode }}{% endif %}">Semua Pelanggan</a>
+                <a class="{% if tab == 'active' %}active{% endif %}" href="?tab=active{% if query %}&q={{ query|urlencode }}{% endif %}">Sedang Menyewa</a>
+                <a class="{% if tab == 'overdue' %}active{% endif %}" href="?tab=overdue{% if query %}&q={{ query|urlencode }}{% endif %}">Pernah Terlambat</a>
+              </div>
+            </div>
+
+            <div class="panel-body">
+              <div class="table-wrap">
+                <table class="dash-table">
+                  <thead>
+                    <tr>
+                      <th>Pelanggan</th>
+                      <th>NIK KTP</th>
+                      <th>No. WhatsApp</th>
+                      <th>Selesai</th>
+                      <th>Status Aktif</th>
+                      <th>Kepatuhan</th>
+                      <th>Riwayat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in rows %}
+                    <tr>
+                      <td>
+                        <div class="user-cell">
+                          <span class="avatar-circle">{{ row.user.username|first|upper }}</span>
+                          <div>
+                            <div class="row-strong">{{ row.user.display_name }}</div>
+                            <small>@{{ row.user.username }}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="mono">{{ row.nik }}</td>
+                      <td class="mono">{{ row.phone }}</td>
+                      <td class="mono">{{ row.total_done }}</td>
+                      <td>
+                        {% if row.active_count %}
+                          <span class="badge active">{{ row.active_count }} sedang menyewa</span>
+                        {% else %}
+                          <span class="badge done">Tidak ada</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if row.overdue_count %}
+                          <span class="badge rejected">Pernah Terlambat ({{ row.overdue_count }}x)</span>
+                        {% else %}
+                          <span class="badge active">Selalu Tepat Waktu</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <details class="rt-history">
+                          <summary>Lihat Riwayat Rental</summary>
+                          <div class="rt-history-body">
+                            {% for o in row.history %}
+                            <div class="rt-history-row">
+                              <div>
+                                <a href="{% url 'rentals:order_detail' o.order_code %}" class="mono">{{ o.order_code }}</a>
+                                <small>{{ o.pickup_plan_date|date:"d M Y" }} → {{ o.return_plan_date|date:"d M Y" }}</small>
+                              </div>
+                              <div style="text-align:right">
+                                <span class="badge {{ o.badge_class }}">{{ o.get_status_display }}</span>
+                                {% if o.total_fine %}
+                                  <small class="rt-fine-note">Denda {{ o.formatted_total_fine }} · {{ o.get_fine_payment_status_display }}</small>
+                                {% endif %}
+                              </div>
+                            </div>
+                            {% empty %}
+                              <div class="adm-muted">Belum ada pesanan.</div>
+                            {% endfor %}
+                          </div>
+                        </details>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7">Belum ada pelanggan yang cocok dengan filter.</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="dash-overlay" id="dashOverlay"></div>
+
+  <script>
+    (function () {
+      const t = document.getElementById("dashToggle");
+      const side = document.getElementById("dashSide");
+      const ov = document.getElementById("dashOverlay");
+      if (t && side) t.addEventListener("click", () => { side.classList.toggle("open"); if (ov) ov.classList.toggle("show"); });
+      if (ov) ov.addEventListener("click", () => { side.classList.remove("open"); ov.classList.remove("show"); });
+    })();
+    (function () {
+      const item = document.getElementById("accountItem");
+      if (!item) return;
+      const toggle = document.getElementById("accountToggle");
+      const open = () => { item.classList.add("open"); toggle.setAttribute("aria-expanded", "true"); };
+      const close = () => { item.classList.remove("open"); toggle.setAttribute("aria-expanded", "false"); };
+      item.addEventListener("mouseenter", () => { if (window.innerWidth > 991) open(); });
+      item.addEventListener("mouseleave", () => { if (window.innerWidth > 991) close(); });
+      toggle.addEventListener("click", e => {
+        e.preventDefault(); e.stopPropagation();
+        if (window.innerWidth <= 991) item.classList.contains("open") ? close() : open();
+      });
+      document.addEventListener("click", e => { if (!item.contains(e.target)) close(); });
+    })();
+  </script>
+</body>
+</html>

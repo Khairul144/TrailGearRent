@@ -3,6 +3,9 @@
 # Nomor WhatsApp resmi (format internasional tanpa "+").
 WHATSAPP_NUMBER = "6287812000155"
 
+# Tarif denda keterlambatan harian tetap (Rp 10.000 / hari).
+LATE_FEE_PER_DAY = 10_000
+
 BANK_ACCOUNTS = [
     {
         "method": "TRANSFER_BCA",

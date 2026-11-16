@@ -177,6 +177,11 @@ class SecurityEvent(models.Model):
     ACCOUNT_LOCKED = "ACCOUNT_LOCKED"
     PAYMENT_PROOF_UPLOADED = "PAYMENT_PROOF_UPLOADED"
     PAYMENT_PROOF_REJECTED = "PAYMENT_PROOF_REJECTED"
+    RETURN_COMPLETED = "RETURN_COMPLETED"
+    FINE_PAID = "FINE_PAID"
+    ORDER_CANCELLED = "ORDER_CANCELLED"
+    ORDER_APPROVED = "ORDER_APPROVED"
+    MAKER_CHECKER_VIOLATION = "MAKER_CHECKER_VIOLATION"
 
     EVENT_CHOICES = [
         (REGISTER_SUCCESS, "Register berhasil"),
@@ -192,6 +197,11 @@ class SecurityEvent(models.Model):
         (ACCOUNT_LOCKED, "Akun terkunci sementara"),
         (PAYMENT_PROOF_UPLOADED, "Bukti pembayaran diunggah"),
         (PAYMENT_PROOF_REJECTED, "Berkas bukti pembayaran ditolak"),
+        (RETURN_COMPLETED, "Pengembalian alat diproses"),
+        (FINE_PAID, "Denda keterlambatan dilunasi"),
+        (ORDER_CANCELLED, "Pesanan dibatalkan pelanggan"),
+        (ORDER_APPROVED, "Pesanan diverifikasi/disetujui checker"),
+        (MAKER_CHECKER_VIOLATION, "Pelanggaran pemisahan role Maker-Checker"),
     ]
 
     STATUS_SUCCESS = "SUCCESS"

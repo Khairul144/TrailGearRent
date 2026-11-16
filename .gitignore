@@ -21,8 +21,12 @@ logs/
 .cache/
 # Bukti pembayaran pelanggan — data sensitif, jangan ikut repo
 media/
+backup_data_local.json
+*.json.bak
 
-# Editor / OS
+# Agent / IDE / OS
+.agents/
+skills-lock.json
 .vscode/
 .idea/
 Thumbs.db

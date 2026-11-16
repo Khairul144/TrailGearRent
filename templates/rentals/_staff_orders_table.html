@@ -43,7 +43,15 @@
             <span class="proof-badge no">Belum Ada Struk</span>
           {% endif %}
         </td>
-        <td><span class="badge {{ order.badge_class }}">{{ order.get_status_display }}</span></td>
+        <td>
+          <span class="badge {{ order.badge_class }}">{{ order.get_status_display }}</span>
+          {% if order.total_fine %}
+            <br><small class="rt-fine-note">
+              Denda {{ order.formatted_total_fine }}
+              &middot; {{ order.get_fine_payment_status_display }}
+            </small>
+          {% endif %}
+        </td>
         <td>
           <div class="rt-staff-actions">
             {% if order.can_confirm %}
@@ -61,10 +69,13 @@
             </form>
             {% endif %}
             {% if order.can_return %}
-            <form method="post" action="{% url 'rentals:staff_order_action' order.order_code 'return' %}">
+            <a class="rt-action return" href="{% url 'rentals:return_inspection' order.order_code %}">Pemeriksaan &amp; Serah Terima</a>
+            {% endif %}
+            {% if order.total_fine and order.fine_payment_status != 'LUNAS' %}
+            <form method="post" action="{% url 'rentals:settle_fine' order.order_code %}">
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <button type="submit" class="rt-action return">Selesai / Kembali</button>
+              <button type="submit" class="rt-action confirm">Lunasi Denda</button>
             </form>
             {% endif %}
             {% if order.can_cancel %}

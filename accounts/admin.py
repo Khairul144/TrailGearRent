@@ -8,10 +8,33 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from .models import SecurityEvent, User
+from .roles import ROLE_ADMIN, has_role
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    def _is_trailgear_admin(self, request):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and (request.user.is_superuser or has_role(request.user, ROLE_ADMIN))
+        )
+
+    def has_module_permission(self, request):
+        return self._is_trailgear_admin(request) or super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._is_trailgear_admin(request) or super().has_view_permission(request, obj)
+
+    def has_add_permission(self, request):
+        return self._is_trailgear_admin(request) or super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._is_trailgear_admin(request) or super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return self._is_trailgear_admin(request) or super().has_delete_permission(request, obj)
+
     list_display = (
         "username",
         "email",

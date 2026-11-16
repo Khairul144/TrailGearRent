@@ -6,7 +6,7 @@
 {% block page_sub %}Kelola seluruh akun customer, kasir, dan admin.{% endblock %}
 
 {% block page_actions %}
-  <a href="/admin/accounts/user/add/" class="btn-xs primary">
+  <a href="{% url 'accounts:admin_user_add' %}" class="btn-xs primary">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
     Tambah User
   </a>
@@ -93,7 +93,7 @@
             <td class="adm-nowrap">{{ u.last_login|date:"d M Y H:i"|default:"—" }}</td>
             <td>
               <div class="table-actions">
-                <a class="btn-xs" href="/admin/accounts/user/{{ u.pk }}/change/">Kelola</a>
+                <a class="btn-xs" href="{% url 'accounts:admin_user_manage' u.pk %}">Kelola</a>
                 {% if u.pk != user.pk %}
                 <form method="post" action="{% url 'accounts:admin_user_toggle' u.pk %}">
                   {% csrf_token %}

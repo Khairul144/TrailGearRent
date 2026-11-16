@@ -2,11 +2,39 @@
 
 from django.contrib import admin
 
+from accounts.roles import ROLE_ADMIN, has_role
+
 from .models import Category, InventoryLog, Product
 
 
+class _AdminRolePermissionMixin:
+    """Izinkan akun dengan role Admin TrailGear mengakses model di /admin/."""
+
+    def _is_trailgear_admin(self, request):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and (request.user.is_superuser or has_role(request.user, ROLE_ADMIN))
+        )
+
+    def has_module_permission(self, request):
+        return self._is_trailgear_admin(request) or super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._is_trailgear_admin(request) or super().has_view_permission(request, obj)
+
+    def has_add_permission(self, request):
+        return self._is_trailgear_admin(request) or super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._is_trailgear_admin(request) or super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return self._is_trailgear_admin(request) or super().has_delete_permission(request, obj)
+
+
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(_AdminRolePermissionMixin, admin.ModelAdmin):
     list_display = ("name", "slug", "order", "show_in_menu", "is_active", "product_count")
     list_editable = ("order", "show_in_menu", "is_active")
     list_filter = ("is_active", "show_in_menu")
@@ -20,7 +48,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(_AdminRolePermissionMixin, admin.ModelAdmin):
     list_display = (
         "name",
         "category",
@@ -40,7 +68,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 @admin.register(InventoryLog)
-class InventoryLogAdmin(admin.ModelAdmin):
+class InventoryLogAdmin(_AdminRolePermissionMixin, admin.ModelAdmin):
     list_display = (
         "created_at",
         "product",

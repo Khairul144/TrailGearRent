@@ -171,3 +171,84 @@ class PaymentProofUploadForm(forms.ModelForm):
                 "Bukti transfer wajib diunggah untuk pembayaran non-tunai.",
             )
         return cleaned
+
+
+class ReturnInspectionForm(forms.Form):
+    """Form pemeriksaan fisik & serah terima pengembalian alat.
+
+    Field per item dibuat dinamis di __init__ (condition_<id>, damage_<id>)
+    karena jumlah item berbeda tiap pesanan.
+    """
+
+    actual_return_date = forms.DateField(
+        label="Tanggal Riil Pengembalian",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    return_notes = forms.CharField(
+        label="Catatan Kondisi & Serah Terima",
+        required=False,
+        widget=forms.Textarea(
+            attrs={"rows": 3, "placeholder": "Contoh: tenda kotor, KTP asli sudah diserahkan"}
+        ),
+    )
+    fine_payment_method = forms.ChoiceField(
+        label="Metode Bayar Denda",
+        choices=[("CASH", "Tunai di Kasir"), ("QRIS", "QRIS Kasir")],
+        initial="CASH",
+        required=False,
+    )
+    confirmed = forms.BooleanField(
+        label=(
+            "Saya telah memeriksa kondisi fisik barang dan menyerahkan kembali "
+            "KTP asli fisik kepada pelanggan."
+        ),
+        required=True,
+    )
+
+    def __init__(self, *args, order, **kwargs):
+        self.order = order
+        super().__init__(*args, **kwargs)
+        for item in order.items.select_related("product"):
+            self.fields[f"condition_{item.pk}"] = forms.ChoiceField(
+                label=item.product.name,
+                choices=item.Condition.choices,
+                initial=item.Condition.BAIK,
+                required=True,
+            )
+            self.fields[f"damage_{item.pk}"] = forms.IntegerField(
+                label=f"Biaya kerusakan {item.product.name}",
+                min_value=0,
+                initial=0,
+                required=False,
+            )
+
+    def clean_actual_return_date(self):
+        value = self.cleaned_data.get("actual_return_date")
+        if value and value < self.order.pickup_plan_date:
+            raise forms.ValidationError(
+                "Tanggal pengembalian tidak boleh sebelum tanggal pengambilan."
+            )
+        if value and value > date.today():
+            raise forms.ValidationError(
+                "Tanggal pengembalian tidak boleh melebihi hari ini."
+            )
+        return value
+
+    def clean_confirmed(self):
+        value = self.cleaned_data.get("confirmed")
+        if not value:
+            raise forms.ValidationError(
+                "Centang pernyataan pemeriksaan fisik sebelum menyelesaikan."
+            )
+        return value
+
+    def item_conditions(self) -> dict:
+        """Kumpulkan kondisi & biaya per item untuk services.complete_return."""
+        data = {}
+        for item in self.order.items.select_related("product"):
+            data[item.pk] = {
+                "condition": self.cleaned_data.get(f"condition_{item.pk}")
+                or item.Condition.BAIK,
+                "damage_fee": self.cleaned_data.get(f"damage_{item.pk}") or 0,
+            }
+        return data

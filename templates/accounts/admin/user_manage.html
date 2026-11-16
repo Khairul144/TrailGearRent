@@ -1,0 +1,167 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Kelola @{{ target.username }} — Admin TrailGear{% endblock %}
+{% block page_title %}Kelola Akun @{{ target.username }}{% endblock %}
+{% block page_sub %}Ubah data profil, ganti role RBAC, buka kunci akun, atau reset password.{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'accounts:admin_users' %}" class="btn-xs">
+    &larr; Daftar User
+  </a>
+  <a href="{% url 'accounts:admin_staff' %}" class="btn-xs">
+    Daftar Staff
+  </a>
+{% endblock %}
+
+{% block admin_content %}
+
+<!-- Ringkasan Status Keamanan Akun -->
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini">
+    <div class="k">Role Saat Ini</div>
+    <div class="v small"><span class="badge role{% if current_role == 'Admin' %} role-admin{% endif %}">{{ current_role }}</span></div>
+  </div>
+  <div class="adm-mini">
+    <div class="k">Status Akun</div>
+    <div class="v small">
+      {% if target.is_active %}<span class="badge active">Aktif</span>{% else %}<span class="badge rejected">Nonaktif</span>{% endif %}
+    </div>
+  </div>
+  <div class="adm-mini">
+    <div class="k">Gagal Login Beruntun</div>
+    <div class="v small">{{ target.failed_login_attempts }}x {% if target.is_locked %}<span class="badge rejected">Terkunci</span>{% endif %}</div>
+  </div>
+  <div class="adm-mini">
+    <div class="k">Login Terakhir</div>
+    <div class="v small">{{ target.last_login|date:"d M Y H:i"|default:"Belum pernah" }}</div>
+  </div>
+</div>
+
+{% if target.failed_login_attempts > 0 or target.is_locked %}
+<div class="panel" style="margin-top:0; margin-bottom:20px; border-color:#f5c6c2">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Buka Kunci Akun (Account Lockout)</div>
+      <div class="panel-sub">
+        Akun ini tercatat memiliki {{ target.failed_login_attempts }} percobaan gagal
+        {% if target.locked_until %}(terkunci hingga {{ target.locked_until|date:"d M Y H:i:s" }}){% endif %}.
+      </div>
+    </div>
+    <form method="post" action="{% url 'accounts:admin_user_manage' target.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="unlock">
+      <button type="submit" class="btn-xs primary">Buka Kunci &amp; Reset Counter</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<!-- Form Profil & Role -->
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Profil &amp; Hak Akses (Role)</div>
+      <div class="panel-sub">Mengubah role menjadi Admin otomatis memberikan akses staff; mengubah ke Kasir/Customer mencabut akses Django Admin sesuai Least Privilege.</div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <form method="post" action="{% url 'accounts:admin_user_manage' target.pk %}" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="profile_role">
+      <div class="settings-grid">
+        <div class="form-row">
+          <label>Username</label>
+          <input type="text" value="{{ target.username }}" readonly>
+        </div>
+        <div class="form-row">
+          <label for="mngEmail">Email *</label>
+          <input type="email" id="mngEmail" name="email" maxlength="254" required
+                 value="{{ profile_form.email.value|default_if_none:'' }}"{% if profile_form.email.errors %} class="input-error"{% endif %}>
+          {% if profile_form.email.errors %}<span class="field-error">{{ profile_form.email.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-row">
+          <label for="mngFirst">Nama Depan</label>
+          <input type="text" id="mngFirst" name="first_name" maxlength="150"
+                 value="{{ profile_form.first_name.value|default_if_none:'' }}">
+        </div>
+        <div class="form-row">
+          <label for="mngLast">Nama Belakang</label>
+          <input type="text" id="mngLast" name="last_name" maxlength="150"
+                 value="{{ profile_form.last_name.value|default_if_none:'' }}">
+        </div>
+        <div class="form-row">
+          <label for="mngPhone">No. HP / WhatsApp</label>
+          <input type="tel" id="mngPhone" name="phone_number" maxlength="20"
+                 value="{{ profile_form.phone_number.value|default_if_none:'' }}"{% if profile_form.phone_number.errors %} class="input-error"{% endif %}>
+          {% if profile_form.phone_number.errors %}<span class="field-error">{{ profile_form.phone_number.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-row">
+          <label for="mngRole">Role Akun (RBAC)</label>
+          <select id="mngRole" name="role">
+            {% for val, label in role_choices %}
+              <option value="{{ val }}" {% if current_role == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-row full">
+          <label for="mngAddr">Alamat</label>
+          <textarea id="mngAddr" name="address" maxlength="500">{{ profile_form.address.value|default_if_none:'' }}</textarea>
+        </div>
+        <div class="form-row full">
+          <label for="mngActive">Status Aktif Akun</label>
+          <select id="mngActive" name="is_active">
+            <option value="1" {% if target.is_active %}selected{% endif %}>Aktif (Dapat Login)</option>
+            <option value="0" {% if not target.is_active %}selected{% endif %}>Nonaktif (Diblokir Login)</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button type="submit" class="btn-save">Simpan Perubahan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Form Reset Password oleh Admin -->
+<div class="panel" style="margin-top:24px">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Reset Password Akun</div>
+      <div class="panel-sub">Gunakan bila pengguna lupa password atau wajib rotasi password segera.</div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <form method="post" action="{% url 'accounts:admin_user_manage' target.pk %}" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="reset_password">
+      <div class="settings-grid">
+        <div class="form-row">
+          <label for="rstPass">Password Baru *</label>
+          <div class="pass-field">
+            <input type="password" id="rstPass" name="new_password" maxlength="128" required placeholder="Minimal 8 karakter kuat" autocomplete="new-password">
+            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password baru" aria-pressed="false" title="Tampilkan password baru">
+              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="rstPass2">Konfirmasi Password Baru *</label>
+          <div class="pass-field">
+            <input type="password" id="rstPass2" name="new_password_confirmation" maxlength="128" required placeholder="Ulangi password baru" autocomplete="new-password">
+            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan konfirmasi password baru" aria-pressed="false" title="Tampilkan konfirmasi password baru">
+              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button type="submit" class="btn-save">Perbarui Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

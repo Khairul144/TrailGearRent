@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}">
-  <link rel="stylesheet" href="{% static 'css/account.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}?v=3">
 </head>
 <body id="top">
 
@@ -204,17 +204,35 @@
             <div class="settings-grid">
               <div class="form-row full">
                 <label for="passOld">Password Lama</label>
-                <input type="password" id="passOld" name="current_password" placeholder="Password lama" maxlength="128" autocomplete="current-password"{% if password_form.current_password.errors %} class="input-error"{% endif %}>
+                <div class="pass-field">
+                  <input type="password" id="passOld" name="current_password" placeholder="Password lama" maxlength="128" autocomplete="current-password"{% if password_form.current_password.errors %} class="input-error"{% endif %}>
+                  <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password lama" aria-pressed="false" title="Tampilkan password lama">
+                    <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                    <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
                 {% if password_form.current_password.errors %}<span class="field-error">{{ password_form.current_password.errors.0 }}</span>{% endif %}
               </div>
               <div class="form-row">
                 <label for="passNew">Password Baru</label>
-                <input type="password" id="passNew" name="new_password" placeholder="Password baru" maxlength="128" autocomplete="new-password"{% if password_form.new_password.errors %} class="input-error"{% endif %}>
+                <div class="pass-field">
+                  <input type="password" id="passNew" name="new_password" placeholder="Password baru" maxlength="128" autocomplete="new-password"{% if password_form.new_password.errors %} class="input-error"{% endif %}>
+                  <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password baru" aria-pressed="false" title="Tampilkan password baru">
+                    <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                    <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
                 {% if password_form.new_password.errors %}<span class="field-error">{{ password_form.new_password.errors.0 }}</span>{% endif %}
               </div>
               <div class="form-row">
                 <label for="passConfirm">Konfirmasi Password Baru</label>
-                <input type="password" id="passConfirm" name="new_password_confirmation" placeholder="Ulangi password baru" maxlength="128" autocomplete="new-password"{% if password_form.new_password_confirmation.errors %} class="input-error"{% endif %}>
+                <div class="pass-field">
+                  <input type="password" id="passConfirm" name="new_password_confirmation" placeholder="Ulangi password baru" maxlength="128" autocomplete="new-password"{% if password_form.new_password_confirmation.errors %} class="input-error"{% endif %}>
+                  <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan konfirmasi password baru" aria-pressed="false" title="Tampilkan konfirmasi password baru">
+                    <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                    <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
                 {% if password_form.new_password_confirmation.errors %}<span class="field-error">{{ password_form.new_password_confirmation.errors.0 }}</span>{% endif %}
               </div>
             </div>
@@ -306,6 +324,37 @@
     setTimeout(() => {
       document.querySelectorAll('.page-msg').forEach(el => el.remove());
     }, 4000);
+
+    // Toggle lihat / sembunyikan password
+    document.querySelectorAll("[data-pass-toggle]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const wrap = btn.closest(".auth-input, .pass-field");
+        const input = wrap ? wrap.querySelector("input") : null;
+        if (!input) return;
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.classList.toggle("is-visible", show);
+        btn.setAttribute("aria-pressed", show ? "true" : "false");
+        btn.setAttribute("aria-label", show ? "Sembunyikan password" : "Tampilkan password");
+        btn.setAttribute("title", show ? "Sembunyikan password" : "Tampilkan password");
+        const eye = btn.querySelector(".icon-eye");
+        const eyeOff = btn.querySelector(".icon-eye-off");
+        if (eye && eyeOff) {
+          eye.hidden = !show;
+          eye.style.display = show ? "block" : "none";
+          eyeOff.hidden = show;
+          eyeOff.style.display = show ? "none" : "block";
+        }
+      });
+    });
+    const passwordForm = document.getElementById("passwordForm");
+    if (passwordForm) {
+      passwordForm.addEventListener("submit", () => {
+        passwordForm.querySelectorAll(".pass-field input").forEach(el => {
+          el.type = "password";
+        });
+      });
+    }
   </script>
   <script>
     // Dropdown akun: hover di desktop, klik di mobile

@@ -1025,3 +1025,179 @@ input { font-family: inherit; }
   .card-testimonial { max-width: 100%; padding: 26px 24px; }
   .row-head { flex-direction: column; align-items: flex-start; }
 }
+
+/* ============================================================
+   FLOATING TOAST NOTIFICATION (AJAX Add-to-Cart & Feedback)
+   ============================================================ */
+.tg-toast-container {
+  position: fixed;
+  top: 88px;
+  right: 24px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 380px;
+  width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+.tg-toast {
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 17px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #d7ead7;
+  box-shadow: 0 14px 34px rgba(16, 24, 16, 0.16), 0 2px 8px rgba(16, 24, 16, 0.06);
+  color: #101010;
+  transform: translateX(32px) scale(0.97);
+  opacity: 0;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+}
+
+.tg-toast.is-visible {
+  transform: translateX(0) scale(1);
+  opacity: 1;
+}
+
+.tg-toast.is-leaving {
+  transform: translateX(28px) scale(0.96);
+  opacity: 0;
+}
+
+.tg-toast--success {
+  border-color: #b7e4b5;
+  background: linear-gradient(135deg, #f4fdf3 0%, #ffffff 60%);
+}
+
+.tg-toast--error {
+  border-color: #ffa39e;
+  background: linear-gradient(135deg, #fff2f0 0%, #ffffff 60%);
+}
+
+.tg-toast-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #dff8dd;
+  color: #1b5e20;
+}
+
+.tg-toast--error .tg-toast-icon {
+  background: #ffccc7;
+  color: #b71c1c;
+}
+
+.tg-toast-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tg-toast-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #101010;
+  line-height: 1.25;
+}
+
+.tg-toast--error .tg-toast-title {
+  color: #a8071a;
+}
+
+.tg-toast-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b423b;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.tg-toast-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #1b5e20;
+  text-decoration: none;
+}
+
+.tg-toast-link:hover {
+  text-decoration: underline;
+}
+
+.tg-toast-close {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tg-toast-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #101010;
+}
+
+.tg-toast-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: #55d452;
+  transform-origin: left center;
+  animation: tgToastProgress 3.8s linear forwards;
+}
+
+.tg-toast--error .tg-toast-bar {
+  background: #e53935;
+}
+
+.tg-toast:hover .tg-toast-bar {
+  animation-play-state: paused;
+}
+
+@keyframes tgToastProgress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@media (max-width: 575px) {
+  .tg-toast-container {
+    top: auto;
+    bottom: 18px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media print {
+  .tg-toast-container {
+    display: none !important;
+  }
+}

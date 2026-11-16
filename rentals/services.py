@@ -17,6 +17,7 @@ from django.db import transaction
 
 from catalog.models import InventoryLog, Product
 
+from .constants import LATE_FEE_PER_DAY
 from .models import Cart, CartItem, RentalOrder, RentalOrderItem
 
 MIN_DURATION = 1
@@ -33,6 +34,18 @@ class StockError(CartError):
 
 class OrderTransitionError(Exception):
     """Perubahan status pesanan tidak diizinkan."""
+
+
+class MakerCheckerViolationError(OrderTransitionError):
+    """Pelanggaran pemisahan tugas (Separation of Duties / Maker-Checker).
+
+    Pembuat transaksi (Maker) tidak diizinkan menjadi pihak yang menyetujui
+    atau memverifikasi (Checker) transaksinya sendiri.
+    """
+
+
+class ReturnValidationError(Exception):
+    """Data pemeriksaan pengembalian tidak valid (pesan siap tampil)."""
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +409,22 @@ def set_order_status(order: RentalOrder, new_status: str, actor=None) -> RentalO
         order = RentalOrder.objects.select_for_update().get(pk=order.pk)
         if new_status == order.status:
             return order
+        if (
+            actor is not None
+            and getattr(actor, "is_authenticated", False)
+            and order.user_id is not None
+            and order.user_id == actor.pk
+            and new_status
+            in (
+                RentalOrder.Status.DIKONFIRMASI,
+                RentalOrder.Status.DIAMBIL,
+                RentalOrder.Status.KEMBALI,
+            )
+        ):
+            raise MakerCheckerViolationError(
+                "Pelanggaran Maker-Checker: Pembuat pesanan (Maker) tidak diizinkan "
+                "memverifikasi atau menyetujui pesanannya sendiri (Checker harus staf berbeda)."
+            )
         allowed = STATUS_TRANSITIONS.get(order.status, set())
         if new_status not in allowed:
             raise OrderTransitionError(
@@ -425,3 +454,220 @@ def pickup_window(order: RentalOrder):
         if order.return_plan_date and order.pickup_plan_date
         else 0,
     }
+
+
+# ---------------------------------------------------------------------------
+# Pengembalian alat: denda keterlambatan & mutasi stok per kondisi
+# ---------------------------------------------------------------------------
+def calculate_overdue(order: RentalOrder, actual_return_date):
+    """Hitung (hari_terlambat, denda) dari tanggal riil vs rencana kembali.
+
+    Denda = (Hari Terlambat) x Tarif Denda Harian (Rp 10.000 / hari).
+    """
+    if actual_return_date is None:
+        return 0, 0
+    if actual_return_date > order.return_plan_date:
+        days = (actual_return_date - order.return_plan_date).days
+        return days, days * LATE_FEE_PER_DAY
+    return 0, 0
+
+
+def complete_return(
+    order: RentalOrder,
+    actor,
+    *,
+    actual_return_date,
+    item_conditions: dict,
+    return_notes: str = "",
+    fine_payment_method: str = "CASH",
+) -> RentalOrder:
+    """Selesaikan pengembalian: validasi, denda, mutasi stok, status KEMBALI.
+
+    item_conditions: {item_id: {"condition": "...", "damage_fee": int}}
+    """
+    if actual_return_date is None:
+        raise ReturnValidationError("Tanggal pengembalian wajib diisi.")
+    if actual_return_date < order.pickup_plan_date:
+        raise ReturnValidationError(
+            "Tanggal pengembalian tidak boleh sebelum tanggal pengambilan."
+        )
+    if actual_return_date > date.today():
+        raise ReturnValidationError(
+            "Tanggal pengembalian tidak boleh melebihi hari ini."
+        )
+
+    with transaction.atomic():
+        order = RentalOrder.objects.select_for_update().get(pk=order.pk)
+        if (
+            actor is not None
+            and getattr(actor, "is_authenticated", False)
+            and order.user_id is not None
+            and order.user_id == actor.pk
+        ):
+            raise MakerCheckerViolationError(
+                "Pelanggaran Maker-Checker: Pembuat pesanan (Maker) tidak diizinkan "
+                "memproses pengembalian pesanannya sendiri (Checker harus staf berbeda)."
+            )
+        if order.status != RentalOrder.Status.DIAMBIL:
+            raise OrderTransitionError(
+                "Pengembalian hanya dapat diproses untuk pesanan berstatus "
+                "Berjalan (Diambil)."
+            )
+
+        items = list(order.items.select_related("product"))
+        overdue_days, overdue_fine = calculate_overdue(order, actual_return_date)
+
+        damage_total = 0
+        for item in items:
+            data = item_conditions.get(item.pk) or {}
+            condition = data.get("condition") or item.Condition.BAIK
+            try:
+                fee = int(data.get("damage_fee") or 0)
+            except (TypeError, ValueError):
+                raise ReturnValidationError("Nominal biaya kerusakan harus angka.")
+            if fee < 0:
+                raise ReturnValidationError("Biaya kerusakan tidak boleh negatif.")
+            if condition not in dict(item.Condition.choices):
+                raise ReturnValidationError("Kondisi barang tidak dikenal.")
+
+            item.condition_at_return = condition
+            item.item_damage_fee = fee
+            item.save(update_fields=["condition_at_return", "item_damage_fee"])
+            damage_total += fee
+
+            product = Product.objects.select_for_update().get(pk=item.product_id)
+            before = product.available_stock
+
+            if condition in (
+                item.Condition.BAIK,
+                item.Condition.KOTOR,
+                item.Condition.RUSAK_RINGAN,
+            ):
+                after = min(before + item.quantity, max(product.total_stock, before))
+                if after != before:
+                    product.available_stock = after
+                    product.save(update_fields=["available_stock", "updated_at"])
+                InventoryLog.objects.create(
+                    product=product,
+                    changed_by=actor if getattr(actor, "is_authenticated", False) else None,
+                    action=InventoryLog.Action.RETURNED,
+                    quantity_change=after - before,
+                    stock_before=before,
+                    stock_after=after,
+                    notes=f"Order {order.order_code} ({condition})",
+                )
+            else:
+                # RUSAK_BERAT / HILANG: unit tidak kembali ke stok siap sewa.
+                if condition == item.Condition.HILANG:
+                    product.total_stock = max(product.total_stock - item.quantity, 0)
+                    product.available_stock = min(
+                        product.available_stock, product.total_stock
+                    )
+                    product.save(
+                        update_fields=["total_stock", "available_stock", "updated_at"]
+                    )
+                InventoryLog.objects.create(
+                    product=product,
+                    changed_by=actor if getattr(actor, "is_authenticated", False) else None,
+                    action=InventoryLog.Action.DAMAGED,
+                    quantity_change=0,
+                    stock_before=before,
+                    stock_after=product.available_stock,
+                    notes=f"Order {order.order_code} kondisi={condition}",
+                )
+
+        total_fine = overdue_fine + damage_total
+        if total_fine == 0:
+            fine_status = RentalOrder.FinePaymentStatus.TIDAK_ADA_DENDA
+        else:
+            fine_status = RentalOrder.FinePaymentStatus.MENUNGGU_PEMBAYARAN
+
+        note_parts = []
+        if return_notes.strip():
+            note_parts.append(return_notes.strip())
+        if total_fine > 0:
+            note_parts.append(f"Denda dibayar via {fine_payment_method}.")
+
+        order.actual_return_date = actual_return_date
+        order.overdue_days = overdue_days
+        order.overdue_fine = overdue_fine
+        order.damage_fine = damage_total
+        order.total_fine = total_fine
+        order.fine_payment_status = fine_status
+        order.return_notes = " ".join(note_parts)
+        order.returned_by_staff = actor if getattr(actor, "is_authenticated", False) else None
+        order.status = RentalOrder.Status.KEMBALI
+        order.stock_deducted = False
+        order.save(
+            update_fields=[
+                "actual_return_date",
+                "overdue_days",
+                "overdue_fine",
+                "damage_fine",
+                "total_fine",
+                "fine_payment_status",
+                "return_notes",
+                "returned_by_staff",
+                "status",
+                "stock_deducted",
+                "updated_at",
+            ]
+        )
+    return order
+
+
+def settle_fine(order: RentalOrder, actor) -> RentalOrder:
+    """Tandai denda pengembalian sudah dibayar lunas."""
+    with transaction.atomic():
+        order = RentalOrder.objects.select_for_update().get(pk=order.pk)
+        if (
+            actor is not None
+            and getattr(actor, "is_authenticated", False)
+            and order.user_id is not None
+            and order.user_id == actor.pk
+        ):
+            raise MakerCheckerViolationError(
+                "Pelanggaran Maker-Checker: Pembuat pesanan (Maker) tidak diizinkan "
+                "melunasi denda pesanannya sendiri (Checker harus staf berbeda)."
+            )
+        if order.status != RentalOrder.Status.KEMBALI:
+            raise OrderTransitionError("Denda hanya dapat dilunasi setelah pengembalian.")
+        if order.total_fine <= 0:
+            raise ReturnValidationError("Pesanan ini tidak memiliki denda.")
+        if order.fine_payment_status == RentalOrder.FinePaymentStatus.LUNAS:
+            raise ReturnValidationError("Denda pesanan ini sudah lunas.")
+        order.fine_payment_status = RentalOrder.FinePaymentStatus.LUNAS
+        order.save(update_fields=["fine_payment_status", "updated_at"])
+    return order
+
+
+def cancel_order_by_customer(order: RentalOrder, actor) -> RentalOrder:
+    """Batalkan pesanan mandiri oleh pelanggan pemilik.
+
+    Keamanan:
+    - Hanya pemilik pesanan yang berhak membatalkan (anti-IDOR).
+    - Hanya diizinkan ketika status masih MENUNGGU_PEMBAYARAN (dikunci dengan
+      select_for_update di dalam transaction.atomic untuk mencegah race condition
+      jika kasir baru saja mengonfirmasi pesanan).
+    """
+    from django.core.exceptions import PermissionDenied
+
+    if actor is None or not getattr(actor, "is_authenticated", False):
+        raise PermissionDenied("Autentikasi diperlukan.")
+
+    with transaction.atomic():
+        order = RentalOrder.objects.select_for_update().get(pk=order.pk)
+        if order.user_id != actor.pk:
+            raise PermissionDenied("Anda tidak berhak membatalkan pesanan ini.")
+        if order.status != RentalOrder.Status.MENUNGGU_PEMBAYARAN:
+            raise OrderTransitionError(
+                "Pesanan ini tidak dapat dibatalkan karena statusnya sudah "
+                f"{order.get_status_display()}."
+            )
+        if order.stock_deducted:
+            _restore_stock(order, actor)
+            order.stock_deducted = False
+
+        order.status = RentalOrder.Status.DIBATALKAN
+        order.save(update_fields=["status", "stock_deducted", "updated_at"])
+    return order

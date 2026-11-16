@@ -133,7 +133,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
               Pengembalian
             </a>
-            <a href="#">
+            <a href="{% url 'accounts:cashier_customers' %}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Pelanggan
             </a>
@@ -155,7 +155,7 @@
               <p class="dash-sub" style="margin-bottom:0;">Ringkasan operasional rental hari ini.</p>
             </div>
             <div class="page-head-actions">
-              <button class="btn-xs" type="button" onclick="location.href='{% url 'rentals:staff_order_list' %}?status=DIKONFIRMASI'">
+              <button class="btn-xs" type="button" id="btnScanPickup" data-open-scan-modal>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h6"/></svg>
                 Scan Pengambilan
               </button>
@@ -303,6 +303,7 @@
 
   <div class="dash-overlay" id="dashOverlay"></div>
   <div class="toast" id="toast"></div>
+  {% include "rentals/_scan_lookup_modal.html" %}
 
   <script>
     // Sidebar mobile

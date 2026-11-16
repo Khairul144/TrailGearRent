@@ -108,13 +108,30 @@
                 badge.style.display = data.cart_items_count > 0 ? "flex" : "none";
               }
             }
+            if (typeof window.trailgearToast === "function") {
+              window.trailgearToast(data.message || "Produk ditambahkan ke keranjang.", {
+                type: "success",
+                cartCount: data.cart_items_count,
+                cartUrl: data.cart_url || "/cart/",
+                showCartLink: true,
+              });
+            }
             btnAddCart.dataset.added = "1";
             btnAddCart.innerHTML = "Tambah Lagi";
+          } else if (typeof window.trailgearToast === "function") {
+            window.trailgearToast(data.message || "Gagal menambahkan ke keranjang.", {
+              type: "error",
+            });
           }
         } catch (error) {
           rentNote.hidden = false;
           rentNote.textContent = "Koneksi bermasalah. Coba lagi sebentar.";
           rentNote.classList.add("err");
+          if (typeof window.trailgearToast === "function") {
+            window.trailgearToast("Koneksi bermasalah. Coba lagi sebentar.", {
+              type: "error",
+            });
+          }
         } finally {
           btnAddCart.disabled = false;
           if (!btnAddCart.dataset.added) btnAddCart.innerHTML = originalLabel;

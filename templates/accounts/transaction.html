@@ -143,6 +143,17 @@
 
       <!-- Content -->
       <section class="dash-content">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="page-msg {{ message.tags }}" role="alert">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                <span>{{ message }}</span>
+              </div>
+              <button type="button" class="msg-close" onclick="this.parentElement.remove()" aria-label="Tutup">&times;</button>
+            </div>
+          {% endfor %}
+        {% endif %}
         <h1 class="dash-title">Transaksi Saya</h1>
         <p class="dash-sub">Riwayat sewa dan status pesanan kamu ada di sini.</p>
 
@@ -181,7 +192,20 @@
                   <td>{{ order.duration_days }} hari</td>
                   <td class="mono">{{ order.formatted_grand_total }}</td>
                   <td><span class="badge {{ order.badge_class }}">{{ order.get_status_display }}</span></td>
-                  <td><a href="{% url 'rentals:order_detail' order.order_code %}" style="font-weight:700;text-decoration:underline">Nota</a></td>
+                  <td>
+                    <div style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                      <a href="{% url 'rentals:order_detail' order.order_code %}" style="font-weight:700;text-decoration:underline">Nota</a>
+                      {% if order.can_customer_cancel %}
+                      <form method="post" action="{% url 'rentals:customer_cancel_order' order.order_code %}"
+                            style="display:inline;margin:0;"
+                            onsubmit="return confirm('Batalkan pesanan {{ order.order_code }}?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn-trx-cancel">Batalkan</button>
+                      </form>
+                      {% endif %}
+                    </div>
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>

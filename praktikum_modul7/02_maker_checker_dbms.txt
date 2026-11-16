@@ -1,0 +1,83 @@
+-- 1. Pasang fungsi & trigger PostgreSQL untuk mencegah Self-Approval (Maker == Checker) pada rentals_rental_order
+CREATE OR REPLACE FUNCTION fn_enforce_maker_checker_order()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Cegah pembuat pesanan (user_id) memproses/menyelesaikan pengembalian pesanannya sendiri
+    IF NEW.returned_by_staff_id IS NOT NULL
+       AND NEW.user_id IS NOT NULL
+       AND NEW.returned_by_staff_id = NEW.user_id THEN
+        RAISE EXCEPTION 'Maker-Checker Violation: Pembuat pesanan (user_id=%) tidak diizinkan memverifikasi/menyelesaikan pesanannya sendiri (returned_by_staff_id=%).',
+            NEW.user_id, NEW.returned_by_staff_id
+            USING ERRCODE = '42501';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE FUNCTION
+DROP TRIGGER IF EXISTS trg_enforce_maker_checker_order ON rentals_rental_order;
+DROP TRIGGER
+CREATE TRIGGER trg_enforce_maker_checker_order
+BEFORE INSERT OR UPDATE ON rentals_rental_order
+FOR EACH ROW
+EXECUTE FUNCTION fn_enforce_maker_checker_order();
+CREATE TRIGGER
+-- 2. Maker (user id dari admin1) membuat pesanan uji berstatus MENUNGGU_PEMBAYARAN
+DELETE FROM rentals_rental_order WHERE order_code = 'TG-20261116-MC01';
+DELETE 0
+INSERT INTO rentals_rental_order (
+    order_code, user_id, full_name, phone_number, id_card_number, id_card_type,
+    pickup_plan_date, return_plan_date, status, total_rental_fee, grand_total,
+    payment_method, payment_proof, notes, stock_deducted,
+    overdue_days, overdue_fine, damage_fine, total_fine, fine_payment_status,
+    return_notes, created_at, updated_at
+)
+SELECT
+    'TG-20261116-MC01', id, 'Uji Maker', '081234567890', '3201010101010001', 'KTP',
+    CURRENT_DATE, CURRENT_DATE + 2, 'MENUNGGU_PEMBAYARAN', 50000, 50000,
+    'TRANSFER_BCA', '', 'Simulasi Maker-Checker', false,
+    0, 0, 0, 0, 'TIDAK_ADA_DENDA', '', NOW(), NOW()
+FROM accounts_user WHERE username = 'admin1';
+INSERT 0 1
+-- 3. SKENARIO PELANGGARAN 1: Role Maker (role_customer_db) mencoba menyetujui (UPDATE status -> DIKONFIRMASI) sendiri
+SET ROLE role_customer_db;
+SET
+UPDATE rentals_rental_order
+SET status = 'DIKONFIRMASI'
+WHERE order_code = 'TG-20261116-MC01';
+ERROR:  permission denied for table rentals_rental_order
+RESET ROLE;
+RESET
+-- 4. SKENARIO PELANGGARAN 2: Self-Approval (Maker == Checker: returned_by_staff_id diisi sama dengan user_id pembuat)
+SET ROLE role_kasir_db;
+SET
+UPDATE rentals_rental_order
+SET status = 'KEMBALI',
+    returned_by_staff_id = user_id
+WHERE order_code = 'TG-20261116-MC01';
+ERROR:  Maker-Checker Violation: Pembuat pesanan (user_id=3) tidak diizinkan memverifikasi/menyelesaikan pesanannya sendiri (returned_by_staff_id=3).
+CONTEXT:  PL/pgSQL function fn_enforce_maker_checker_order() line 7 at RAISE
+RESET ROLE;
+RESET
+-- 5. SKENARIO VALID: Checker berbeda (kasir1 != admin1) memverifikasi pesanan menggunakan role_kasir_db
+SET ROLE role_kasir_db;
+SET
+UPDATE rentals_rental_order
+SET status = 'DIKONFIRMASI',
+    returned_by_staff_id = (SELECT id FROM accounts_user WHERE username = 'kasir1')
+WHERE order_code = 'TG-20261116-MC01';
+UPDATE 1
+SELECT order_code, status, user_id AS maker_id, returned_by_staff_id AS checker_id
+FROM rentals_rental_order
+WHERE order_code = 'TG-20261116-MC01';
+    order_code    |    status    | maker_id | checker_id 
+------------------+--------------+----------+------------
+ TG-20261116-MC01 | DIKONFIRMASI |        3 |          4
+(1 row)
+
+RESET ROLE;
+RESET
+-- 6. Bersihkan baris data simulasi sementara agar tabel produksi tetap bersih (trigger tetap aktif permanen)
+DELETE FROM rentals_rental_order WHERE order_code = 'TG-20261116-MC01';
+DELETE 1

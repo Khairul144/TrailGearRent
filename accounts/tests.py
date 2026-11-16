@@ -1266,3 +1266,326 @@ class AdminAreaPagesTest(TestCase):
         self.client.force_login(self.admin)
         response = self.client.get(reverse("accounts:admin_products"))
         self.assertContains(response, "Tenda QA")
+
+
+class CashierCustomersPageTests(TestCase):
+    """Halaman Pelanggan pada sidebar kasir."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from accounts.roles import ROLE_ADMIN, ROLE_CASHIER, ROLE_CUSTOMER, assign_role
+
+        cls.cashier = User.objects.create_user(
+            username="kasir_pel", email="kasir_pel@example.com", password=GOOD_PASSWORD
+        )
+        assign_role(cls.cashier, ROLE_CASHIER)
+
+        cls.admin = User.objects.create_user(
+            username="admin_pel", email="admin_pel@example.com", password=GOOD_PASSWORD
+        )
+        assign_role(cls.admin, ROLE_ADMIN)
+
+        cls.customer = User.objects.create_user(
+            username="pelanggan_a",
+            email="pelanggan_a@example.com",
+            password=GOOD_PASSWORD,
+            first_name="Siti",
+            last_name="Rahma",
+        )
+        assign_role(cls.customer, ROLE_CUSTOMER)
+
+        cls.customer2 = User.objects.create_user(
+            username="pelanggan_b", email="pelanggan_b@example.com", password=GOOD_PASSWORD
+        )
+        assign_role(cls.customer2, ROLE_CUSTOMER)
+
+        from datetime import date, timedelta
+
+        from rentals.models import RentalOrder
+
+        today = date.today()
+        cls.active_order = RentalOrder.objects.create(
+            user=cls.customer,
+            full_name="Siti Rahma",
+            phone_number="081200000001",
+            id_card_number="3301234567890001",
+            pickup_plan_date=today - timedelta(days=2),
+            return_plan_date=today,
+            status=RentalOrder.Status.DIAMBIL,
+        )
+        cls.late_order = RentalOrder.objects.create(
+            user=cls.customer2,
+            full_name="Budi Late",
+            phone_number="081200000002",
+            id_card_number="3301234567890002",
+            pickup_plan_date=today - timedelta(days=10),
+            return_plan_date=today - timedelta(days=4),
+            actual_return_date=today - timedelta(days=2),
+            overdue_days=2,
+            overdue_fine=50000,
+            total_fine=50000,
+            fine_payment_status=RentalOrder.FinePaymentStatus.MENUNGGU_PEMBAYARAN,
+            status=RentalOrder.Status.KEMBALI,
+        )
+
+    def test_cashier_sees_customer_list(self):
+        self.client.force_login(self.cashier)
+        response = self.client.get(reverse("accounts:cashier_customers"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "pelanggan_a")
+        self.assertContains(response, "3301234567890001")
+        self.assertContains(response, "081200000001")
+        self.assertContains(response, "Selalu Tepat Waktu")
+        self.assertContains(response, "Pernah Terlambat")
+
+    def test_admin_can_access_customers_page(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(
+            self.client.get(reverse("accounts:cashier_customers")).status_code, 200
+        )
+
+    def test_search_by_nik_and_phone(self):
+        self.client.force_login(self.cashier)
+        response = self.client.get(
+            reverse("accounts:cashier_customers"), {"q": "3301234567890002"}
+        )
+        self.assertContains(response, "pelanggan_b")
+        self.assertNotContains(response, "pelanggan_a")
+
+        response = self.client.get(
+            reverse("accounts:cashier_customers"), {"q": "081200000001"}
+        )
+        self.assertContains(response, "pelanggan_a")
+        self.assertNotContains(response, "pelanggan_b")
+
+    def test_tab_active_and_overdue_filters(self):
+        self.client.force_login(self.cashier)
+        active = self.client.get(
+            reverse("accounts:cashier_customers"), {"tab": "active"}
+        )
+        self.assertContains(active, "pelanggan_a")
+        self.assertNotContains(active, "pelanggan_b")
+
+        overdue = self.client.get(
+            reverse("accounts:cashier_customers"), {"tab": "overdue"}
+        )
+        self.assertContains(overdue, "pelanggan_b")
+        self.assertNotContains(overdue, "pelanggan_a")
+
+    def test_customer_forbidden(self):
+        self.client.force_login(self.customer)
+        response = self.client.get(reverse("accounts:cashier_customers"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_anonymous_redirected(self):
+        response = self.client.get(reverse("accounts:cashier_customers"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_sidebar_link_points_to_customers_page(self):
+        self.client.force_login(self.cashier)
+        html = self.client.get(reverse("accounts:cashier_dashboard")).content.decode()
+        self.assertIn(reverse("accounts:cashier_customers"), html)
+
+
+class PasswordVisibilityToggleTests(TestCase):
+    """Seluruh form input password memiliki tombol lihat/sembunyikan password."""
+
+    def setUp(self):
+        from accounts.roles import ROLE_CUSTOMER, assign_role
+
+        self.user = User.objects.create_user(
+            username="toggle_user",
+            email="toggle@example.com",
+            password=GOOD_PASSWORD,
+        )
+        assign_role(self.user, ROLE_CUSTOMER)
+
+    def test_login_page_has_password_toggle(self):
+        response = self.client.get(reverse("accounts:login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="pass-toggle" data-pass-toggle', count=1)
+
+    def test_register_page_has_password_toggles(self):
+        response = self.client.get(reverse("accounts:register"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="pass-toggle" data-pass-toggle', count=2)
+
+    def test_password_change_page_has_password_toggles(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("accounts:password_change"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="pass-toggle" data-pass-toggle', count=3)
+
+    def test_settings_page_has_password_toggles(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("accounts:settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="pass-toggle" data-pass-toggle', count=3)
+
+
+class UserAccessReviewTests(TestCase):
+    """Pengujian laporan User Access Review (UAR) pada halaman Keamanan Admin."""
+
+    def setUp(self):
+        from accounts.roles import ROLE_ADMIN, ROLE_CASHIER, ROLE_CUSTOMER, assign_role
+
+        self.admin = User.objects.create_user(
+            username="uar_admin",
+            email="uar_admin@example.com",
+            password=GOOD_PASSWORD,
+            is_staff=True,
+        )
+        assign_role(self.admin, ROLE_ADMIN)
+
+        self.cashier = User.objects.create_user(
+            username="uar_cashier",
+            email="uar_cashier@example.com",
+            password=GOOD_PASSWORD,
+            is_staff=False,
+        )
+        assign_role(self.cashier, ROLE_CASHIER)
+
+        # Simulasi akun Customer dengan privilege berlebih (is_staff=True)
+        self.overprivileged = User.objects.create_user(
+            username="uar_excess",
+            email="uar_excess@example.com",
+            password=GOOD_PASSWORD,
+            is_staff=True,
+        )
+        assign_role(self.overprivileged, ROLE_CUSTOMER)
+
+    def test_admin_security_renders_uar_and_detects_excess_privilege(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("accounts:admin_security"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, "Laporan User Access Review (UAR) — Akun Aplikasi"
+        )
+        self.assertContains(
+            response, "Laporan User Access Review (UAR) — Role DBMS PostgreSQL"
+        )
+        self.assertContains(response, "MAINTAIN (Pertahankan Akses)")
+        self.assertContains(response, "DOWNGRADE PRIVILEGE (Cabut is_staff)")
+
+
+class AdminUserManageAndRateLimitResetTests(TestCase):
+    """Pengujian fitur Tambah Staff/User, Kelola Akun, & Reset Rate Limit IP di Dashboard Admin."""
+
+    def setUp(self):
+        from accounts.roles import ROLE_ADMIN, ROLE_CUSTOMER, assign_role
+
+        self.admin = User.objects.create_user(
+            username="adm_mgr",
+            email="adm_mgr@example.com",
+            password=GOOD_PASSWORD,
+        )
+        assign_role(self.admin, ROLE_ADMIN)
+
+        self.customer = User.objects.create_user(
+            username="cust_mgr",
+            email="cust_mgr@example.com",
+            password=GOOD_PASSWORD,
+        )
+        assign_role(self.customer, ROLE_CUSTOMER)
+
+    def test_admin_can_add_staff_via_dashboard(self):
+        from accounts.roles import primary_role
+
+        self.client.force_login(self.admin)
+        get_res = self.client.get(reverse("accounts:admin_user_add") + "?role=Cashier")
+        self.assertEqual(get_res.status_code, 200)
+
+        post_res = self.client.post(
+            reverse("accounts:admin_user_add"),
+            {
+                "username": "kasir_baru",
+                "email": "kasir_baru@example.com",
+                "first_name": "Budi",
+                "last_name": "Kasir",
+                "phone_number": "081234567890",
+                "role": "Cashier",
+                "password": GOOD_PASSWORD,
+                "password_confirmation": GOOD_PASSWORD,
+            },
+        )
+        self.assertRedirects(post_res, reverse("accounts:admin_staff"))
+        created = User.objects.get(username="kasir_baru")
+        self.assertEqual(primary_role(created), "Cashier")
+        self.assertFalse(created.is_staff)
+
+    def test_admin_can_manage_user_role_and_unlock(self):
+        from accounts.roles import primary_role
+
+        self.client.force_login(self.admin)
+        manage_url = reverse("accounts:admin_user_manage", args=[self.customer.pk])
+        self.assertEqual(self.client.get(manage_url).status_code, 200)
+
+        # Ubah role Customer -> Cashier
+        post_res = self.client.post(
+            manage_url,
+            {
+                "action": "profile_role",
+                "email": self.customer.email,
+                "first_name": "Pelanggan",
+                "last_name": "Naik",
+                "phone_number": "081299998888",
+                "address": "Jl. Mawar 1",
+                "role": "Cashier",
+                "is_active": "1",
+            },
+        )
+        self.assertRedirects(post_res, manage_url)
+        self.customer.refresh_from_db()
+        self.assertEqual(primary_role(self.customer), "Cashier")
+
+        # Buka kunci akun
+        self.customer.failed_login_attempts = 10
+        self.customer.save(update_fields=["failed_login_attempts"])
+        self.client.post(manage_url, {"action": "unlock"})
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.failed_login_attempts, 0)
+
+    def test_admin_cannot_demote_or_deactivate_self(self):
+        from accounts.roles import primary_role
+
+        self.client.force_login(self.admin)
+        manage_url = reverse("accounts:admin_user_manage", args=[self.admin.pk])
+        self.client.post(
+            manage_url,
+            {
+                "action": "profile_role",
+                "email": self.admin.email,
+                "role": "Customer",
+                "is_active": "0",
+            },
+        )
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_active)
+        self.assertEqual(primary_role(self.admin), "Admin")
+
+    def test_django_admin_user_pages_no_longer_forbidden_for_admin_role(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get("/admin/accounts/user/add/").status_code, 200)
+        self.assertEqual(
+            self.client.get(f"/admin/accounts/user/{self.customer.pk}/change/").status_code,
+            200,
+        )
+
+    def test_admin_can_reset_ratelimit_ip_from_web(self):
+        from accounts import ratelimit
+
+        for _ in range(5):
+            ratelimit.register_bump("127.0.0.1")
+        self.assertTrue(ratelimit.register_blocked("127.0.0.1"))
+
+        self.client.force_login(self.admin)
+        res = self.client.post(
+            reverse("accounts:admin_reset_ratelimit"),
+            {"ip": "127.0.0.1"},
+        )
+        self.assertRedirects(res, reverse("accounts:admin_security"))
+        self.assertFalse(ratelimit.register_blocked("127.0.0.1"))
+
+
+
