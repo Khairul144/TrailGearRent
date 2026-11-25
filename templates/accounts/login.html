@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=4">
-  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=6">
   <link rel="stylesheet" href="{% static 'css/account.css' %}?v=4">
 </head>
 <body id="top">
@@ -101,8 +101,44 @@
 
   <!-- ===== LOGIN ===== -->
   <main class="auth-main auth-main--clean">
-    <section class="auth-card auth-card--login">
-      <div class="auth-form-head auth-form-head--center auth-form-head--login">
+    <div class="auth-shell">
+
+      <!-- Panel visual outdoor -->
+      <aside class="auth-visual">
+        <img src="{% static 'assets/img/logo/logo_navbar_white.png' %}?v=2" alt="TrailGear Rent" class="auth-visual-logo">
+        <div class="auth-visual-body">
+          <span class="auth-visual-kicker">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+            Gear Outdoor Rental
+          </span>
+          <h2>Sewa gear camping tanpa ribet.</h2>
+          <p>Pesan online, ambil di toko, kembalikan saat selesai. Setiap alat dicek dan dirawat sebelum disewakan.</p>
+          <ul class="auth-visual-points">
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity=".35"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+              1000+ peralatan camping siap sewa
+            </li>
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity=".35"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+              Checkout kurang dari 5 menit
+            </li>
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity=".35"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+              Buka setiap hari 09:00 – 20:00 WIB
+            </li>
+          </ul>
+        </div>
+        <div class="auth-visual-stats">
+          <div><b>1000+</b><span>Peralatan</span></div>
+          <div><b>50+</b><span>Kategori</span></div>
+          <div><b>4.9</b><span>Rating member</span></div>
+        </div>
+      </aside>
+
+      <!-- Kartu form -->
+      <section class="auth-card auth-card--login">
+        <img class="auth-brand" src="{% static 'assets/img/logo/logo_black_text.png' %}?v=2" alt="TrailGear Rent">
+        <div class="auth-form-head auth-form-head--center auth-form-head--login">
         <span class="auth-pill">Masuk</span>
         <h1 class="auth-heading">Selamat datang kembali</h1>
         <p class="auth-subtitle">Gunakan username atau email terdaftar untuk masuk.</p>
@@ -145,7 +181,8 @@
           </div>
           <p class="auth-switch">Belum punya akun? <a href="{% url 'accounts:register' %}">Ayo daftar jadi member!</a></p>
       </form>
-    </section>
+      </section>
+    </div>
   </main>
 
   <!-- ===== FOOTER ===== -->

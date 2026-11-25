@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=4">
-  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=6">
   <link rel="stylesheet" href="{% static 'css/account.css' %}?v=4">
 </head>
 <body id="top">
@@ -106,8 +106,44 @@
 
   <!-- ===== REGISTER ===== -->
   <main class="auth-main auth-main--clean">
-    <section class="auth-card auth-card--register">
-      <div class="auth-form-head auth-form-head--center">
+    <div class="auth-shell">
+
+      <!-- Panel visual outdoor -->
+      <aside class="auth-visual">
+        <img src="{% static 'assets/img/logo/logo_navbar_white.png' %}?v=2" alt="TrailGear Rent" class="auth-visual-logo">
+        <div class="auth-visual-body">
+          <span class="auth-visual-kicker">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2 15 8.5 22 9.3l-5 4.6 1.3 6.6L12 17.5 5.7 20.5 7 13.9l-5-4.6 7-.8Z"/></svg>
+            Gabung Member
+          </span>
+          <h2>Jadi member, sewa lebih cepat.</h2>
+          <p>Akun member membuka katalog lengkap, riwayat sewa, dan checkout langsung tanpa antre di kasir.</p>
+          <ul class="auth-visual-points">
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity=".35"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+              Gratis, tanpa biaya pendaftaran
+            </li>
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity=".35"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+              Riwayat & status sewa dalam satu tempat
+            </li>
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity=".35"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+              Buka setiap hari 09:00 – 20:00 WIB
+            </li>
+          </ul>
+        </div>
+        <div class="auth-visual-stats">
+          <div><b>1000+</b><span>Peralatan</span></div>
+          <div><b>50+</b><span>Kategori</span></div>
+          <div><b>4.9</b><span>Rating member</span></div>
+        </div>
+      </aside>
+
+      <!-- Kartu form -->
+      <section class="auth-card auth-card--register">
+        <img class="auth-brand" src="{% static 'assets/img/logo/logo_black_text.png' %}?v=2" alt="TrailGear Rent">
+        <div class="auth-form-head auth-form-head--center">
         <span class="auth-pill">Member Baru</span>
         <h1 class="auth-heading">Registrasi Akun</h1>
         <p class="auth-subtitle">Isi data di bawah untuk membuat akun TrailGear Rent.</p>
@@ -194,7 +230,7 @@
           <!-- Real-time Password Requirement Checklist & Konfirmasi Match -->
           <div class="pw-feedback-box" id="pwRequirements" aria-live="polite">
             <div class="pw-feedback-header">
-              <span class="pw-feedback-title">Password requirements</span>
+              <span class="pw-feedback-title">Persyaratan Password</span>
               <span class="pw-match-badge" id="pwMatchStatus">
                 <span class="req-mark" aria-hidden="true">○</span>
                 <span class="match-text">Password belum cocok</span>
@@ -235,7 +271,8 @@
           </div>
           <p class="auth-switch">Sudah punya akun? <a href="{% url 'accounts:login' %}">Masuk di sini!</a></p>
       </form>
-    </section>
+      </section>
+    </div>
   </main>
 
   <!-- ===== FOOTER ===== -->

@@ -554,3 +554,228 @@ input[type="password"]::-ms-clear {
     font-size: 24px;
   }
 }
+
+/* ============================================================
+   Redesign: split shell — panel outdoor + kartu form
+   ============================================================ */
+.auth-main {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 460px at 10% -10%, rgba(112, 244, 109, .30), transparent 62%),
+    radial-gradient(760px 520px at 110% 115%, rgba(94, 221, 91, .24), transparent 60%),
+    linear-gradient(180deg, #f5fcf4 0%, #eaf6e9 100%);
+  padding: 72px 16px 96px;
+}
+/* Motif garis kontur peta — nuansa outdoor */
+.auth-main::before {
+  content: "";
+  position: absolute;
+  inset: -8%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520' viewBox='0 0 520 520' fill='none' stroke='%231f3d1e' stroke-opacity='0.13' stroke-width='1.5'%3E%3Cpath d='M-60 140C60 40 240 240 580 80'/%3E%3Cpath d='M-60 200C60 100 240 300 580 140'/%3E%3Cpath d='M-60 260C60 160 240 360 580 200'/%3E%3Cpath d='M-60 330C90 220 280 430 580 270'/%3E%3Cpath d='M-60 400C90 290 280 500 580 340'/%3E%3Ccircle cx='410' cy='120' r='70'/%3E%3Ccircle cx='410' cy='120' r='110'/%3E%3C/svg%3E");
+  background-size: 520px 520px;
+  pointer-events: none;
+}
+.auth-main > * { position: relative; z-index: 1; }
+.auth-main--clean { min-height: calc(100vh - 320px); }
+
+/* Shell split: panel visual + kartu form */
+.auth-shell {
+  width: 1080px;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: .95fr 1.05fr;
+  background: var(--white);
+  border-radius: 26px;
+  overflow: hidden;
+  box-shadow: 0 34px 64px -22px rgba(18, 56, 17, .38), 0 0 0 1px rgba(0, 0, 0, .04);
+  animation: authRise .55s cubic-bezier(.2, .7, .3, 1) both;
+}
+@keyframes authRise {
+  from { opacity: 0; transform: translateY(20px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Panel visual kiri */
+.auth-visual {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 26px;
+  padding: 44px 38px;
+  color: #f4fff3;
+  background: url("../images/hero-bg.jpg") center / cover no-repeat;
+}
+.auth-visual::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(7, 24, 9, .84), rgba(10, 38, 14, .58) 55%, rgba(45, 74, 44, .72));
+  z-index: -1;
+}
+.auth-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(420px 300px at 15% 100%, rgba(112, 244, 109, .28), transparent 65%);
+  z-index: -1;
+}
+.auth-visual-logo { height: 46px; width: auto; align-self: flex-start; flex-shrink: 0; filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .45)); }
+.auth-visual-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(112, 244, 109, .14);
+  border: 1px solid rgba(112, 244, 109, .45);
+  color: var(--brand);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+.auth-visual-kicker svg { flex-shrink: 0; }
+.auth-visual h2 {
+  font-size: 30px;
+  line-height: 1.18;
+  font-weight: 800;
+  margin: 14px 0 12px;
+  color: #ffffff;
+}
+.auth-visual-body > p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(244, 255, 243, .78);
+  margin-bottom: 20px;
+}
+.auth-visual-points { list-style: none; display: grid; gap: 12px; margin: 0; }
+.auth-visual-points li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(244, 255, 243, .92);
+}
+.auth-visual-points li svg { color: var(--brand); flex-shrink: 0; }
+.auth-visual-stats {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+  padding-top: 18px;
+  border-top: 1px dashed rgba(255, 255, 255, .25);
+}
+.auth-visual-stats > div { min-width: 84px; }
+.auth-visual-stats b { display: block; font-size: 24px; font-weight: 800; color: var(--brand); line-height: 1.1; }
+.auth-visual-stats span { font-size: 12px; color: rgba(244, 255, 243, .70); }
+
+/* Kartu form dalam shell */
+.auth-shell .auth-card--login,
+.auth-shell .auth-card--register {
+  width: 100%;
+  max-width: 100%;
+  align-self: center;
+  border: 0;
+  border-radius: 0;
+    box-shadow: none;
+  }
+.auth-shell .auth-card--login { padding: 46px 44px 40px; }
+.auth-shell .auth-card--register { padding: 40px 44px 36px; }
+.auth-brand { display: block; height: 34px; width: auto; margin: 0 auto 14px; }
+
+/* Pill gradient */
+.auth-pill {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-darken) 100%);
+  box-shadow: 0 6px 16px -4px rgba(112, 244, 109, .55);
+}
+
+/* Input: abu muda, focus menyala hijau (ukuran dari aturan --login/--register tetap) */
+.auth-card--login .auth-input input,
+.auth-card--register .auth-input input {
+  background: #f5f8f5;
+  border: 1px solid transparent;
+}
+.auth-input .input-icon { transition: color .2s ease; }
+.auth-input { transition: none; }
+.auth-card--login .auth-input input,
+.auth-card--register .auth-input input {
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.auth-input:focus-within input {
+  background: var(--white);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(112, 244, 109, 0.18);
+}
+.auth-input:focus-within .input-icon { color: var(--brand-dark); }
+.auth-input input.input-error {
+  border-color: #e53935;
+  background: #fffafa;
+  box-shadow: 0 0 0 4px rgba(229, 57, 53, .10);
+}
+
+/* Tombol gradient hijau + hover lift */
+.btn-auth {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-darken) 100%);
+  border: 0;
+  border-radius: 12px;
+  color: #0b1f0a;
+  cursor: pointer;
+  box-shadow: 0 10px 22px -8px rgba(94, 221, 91, .75);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.btn-auth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px -10px rgba(94, 221, 91, .85);
+  filter: none;
+}
+.btn-auth:active { transform: translateY(0); box-shadow: 0 8px 18px -8px rgba(94, 221, 91, .7); }
+.btn-auth svg { transition: transform .18s ease; }
+.btn-auth:hover svg { transform: translateX(4px); }
+.btn-auth:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+/* Link auth di-highlight hijau */
+.auth-switch a {
+  background: rgba(112, 244, 109, .28);
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: background .2s;
+}
+.auth-switch a:hover { background: rgba(112, 244, 109, .55); color: var(--black); text-decoration: none; }
+
+/* Hint lupa password jadi chip */
+.auth-login-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f4f1;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: background .2s;
+}
+.auth-login-meta:hover .auth-login-hint { background: rgba(112, 244, 109, .25); }
+
+/* Panel password requirements disesuaikan tema */
+.pw-feedback-box {
+  background: linear-gradient(135deg, #f6fdf4 0%, #f1faf0 100%);
+  border-color: #d7ecd6;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 940px) {
+  .auth-shell { grid-template-columns: 1fr; }
+  .auth-visual { padding: 34px 30px; gap: 22px; }
+  .auth-visual h2 { font-size: 26px; }
+}
+@media (max-width: 640px) {
+  .auth-main { padding: 48px 12px 64px; }
+  .auth-shell .auth-card--login,
+  .auth-shell .auth-card--register { padding: 30px 20px 26px; }
+  .auth-visual { padding: 28px 22px; }
+  .auth-visual h2 { font-size: 23px; }
+  .auth-visual-stats { gap: 18px; }
+  .auth-visual-stats b { font-size: 20px; }
+}
