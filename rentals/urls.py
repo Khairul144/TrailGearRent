@@ -62,6 +62,11 @@ urlpatterns = [
         name="settle_fine",
     ),
     path(
+        "dashboard/orders/<str:order_code>/reject-proof/",
+        views.staff_reject_proof,
+        name="staff_reject_proof",
+    ),
+    path(
         "dashboard/orders/<str:order_code>/<str:action>/",
         views.staff_order_action,
         name="staff_order_action",

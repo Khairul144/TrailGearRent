@@ -1,0 +1,105 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Log Inventaris — Admin TrailGear{% endblock %}
+{% block page_title %}Log Audit Inventaris{% endblock %}
+{% block page_sub %}Jejak keluar-masuk unit barang (sewa, kembali, restock, servis, dan stok opname).{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'accounts:admin_products' %}" class="btn-xs">&larr; Barang &amp; Stok</a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Riwayat Mutasi Stok</div>
+      <div class="panel-sub">{{ page_obj.paginator.count }} catatan mutasi cocok dengan filter</div>
+    </div>
+  </div>
+
+  <form class="adm-filters" method="get" action="{% url 'accounts:admin_inventory_logs' %}">
+    <div class="adm-field grow">
+      <label for="fq">Cari</label>
+      <input type="text" id="fq" name="q" value="{{ query }}" placeholder="nama barang, kode order, catatan, atau username">
+    </div>
+    <div class="adm-field">
+      <label for="faction">Jenis Aksi</label>
+      <select id="faction" name="action">
+        <option value="">Semua aksi</option>
+        {% for val, label in action_choices %}
+          <option value="{{ val }}" {% if action_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-xs primary">Terapkan</button>
+    {% if query or action_filter %}
+      <a href="{% url 'accounts:admin_inventory_logs' %}" class="adm-reset">Reset</a>
+    {% endif %}
+  </form>
+
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Barang</th>
+            <th>Jenis Aksi</th>
+            <th>Perubahan</th>
+            <th>Stok Sebelum &rarr; Sesudah</th>
+            <th>Diubah Oleh</th>
+            <th>Catatan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="adm-nowrap">{{ log.created_at|date:"d M Y H:i:s" }}</td>
+            <td>
+              <a href="{% url 'accounts:admin_product_stock' log.product_id %}" class="row-strong">{{ log.product.name }}</a>
+            </td>
+            <td>
+              <span class="badge {% if log.action == 'RESTOCK' or log.action == 'RETURNED' %}active{% elif log.action == 'DAMAGED' %}rejected{% elif log.action == 'RENTED' %}pending{% else %}returned{% endif %}">
+                {{ log.get_action_display }}
+              </span>
+            </td>
+            <td class="mono">{% if log.quantity_change > 0 %}+{% endif %}{{ log.quantity_change }}</td>
+            <td class="mono">{{ log.stock_before }} &rarr; {{ log.stock_after }}</td>
+            <td>
+              {% if log.changed_by %}
+                <a href="{% url 'accounts:admin_user_manage' log.changed_by.pk %}">@{{ log.changed_by.username }}</a>
+              {% else %}Sistem{% endif %}
+            </td>
+            <td class="adm-muted">{{ log.notes|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">Tidak ada catatan mutasi inventaris yang cocok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="adm-pager">
+    <span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+    <div class="adm-pager-links">
+      {% if page_obj.has_previous %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      {% else %}<span class="adm-page disabled">&lsaquo;</span>{% endif %}
+      {% for num in page_range %}
+        {% if num == page_obj.number %}<span class="adm-page active">{{ num }}</span>
+        {% elif num == "…" %}<span class="adm-page dots">…</span>
+        {% else %}<a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      {% else %}<span class="adm-page disabled">&rsaquo;</span>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

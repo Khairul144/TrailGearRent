@@ -6,6 +6,10 @@
 {% block page_sub %}Semua booking pelanggan beserta status dan aksi prosesnya.{% endblock %}
 
 {% block page_actions %}
+  <button type="button" class="btn-xs primary" data-open-scan-modal>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h6"/></svg>
+    Scan / Cari Kode Booking
+  </button>
   <a href="{% url 'rentals:staff_order_list' %}" class="btn-xs">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     Meja Kasir
@@ -17,6 +21,7 @@
 <div class="adm-mini-grid" style="margin-bottom:20px">
   <div class="adm-mini"><div class="k">Semua</div><div class="v">{{ stats.all }}</div></div>
   <div class="adm-mini"><div class="k">Menunggu Bayar</div><div class="v" style="color:#8a6100">{{ stats.pending }}</div></div>
+  <div class="adm-mini"><div class="k">Dikonfirmasi</div><div class="v" style="color:#1b5e20">{{ stats.confirmed }}</div></div>
   <div class="adm-mini"><div class="k">Berjalan</div><div class="v" style="color:#1f5c99">{{ stats.active }}</div></div>
   <div class="adm-mini"><div class="k">Selesai</div><div class="v">{{ stats.done }}</div></div>
   <div class="adm-mini"><div class="k">Dibatalkan</div><div class="v" style="color:#c62828">{{ stats.cancelled }}</div></div>

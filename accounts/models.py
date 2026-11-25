@@ -184,6 +184,7 @@ class SecurityEvent(models.Model):
     MAKER_CHECKER_VIOLATION = "MAKER_CHECKER_VIOLATION"
     ADMIN_USER_UPDATED = "ADMIN_USER_UPDATED"
     ADMIN_SECURITY_OVERRIDE = "ADMIN_SECURITY_OVERRIDE"
+    ADMIN_CATALOG_UPDATED = "ADMIN_CATALOG_UPDATED"
 
     EVENT_CHOICES = [
         (REGISTER_SUCCESS, "Register berhasil"),
@@ -206,6 +207,7 @@ class SecurityEvent(models.Model):
         (MAKER_CHECKER_VIOLATION, "Pelanggaran pemisahan role Maker-Checker"),
         (ADMIN_USER_UPDATED, "Admin mengubah role/status akun"),
         (ADMIN_SECURITY_OVERRIDE, "Admin membuka blokir/reset keamanan"),
+        (ADMIN_CATALOG_UPDATED, "Admin mengelola barang/kategori/stok"),
     ]
 
     STATUS_SUCCESS = "SUCCESS"

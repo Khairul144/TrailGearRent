@@ -3,46 +3,97 @@
 
 {% block title %}Pembayaran — Admin TrailGear{% endblock %}
 {% block page_title %}Pembayaran{% endblock %}
-{% block page_sub %}Pesanan yang belum dibayar. Konfirmasi dilakukan setelah dana diterima.{% endblock %}
+{% block page_sub %}Verifikasi bukti pembayaran pelanggan. Anda dapat mengonfirmasi lunas atau menolak struk yang tidak valid agar pelanggan mengunggah ulang.{% endblock %}
+
+{% block page_actions %}
+  <button type="button" class="btn-xs" data-open-scan-modal>Scan / Cari Booking</button>
+{% endblock %}
 
 {% block admin_content %}
 
 <div class="adm-mini-grid" style="margin-bottom:20px">
   <div class="adm-mini"><div class="k">Menunggu Verifikasi</div><div class="v">{{ pending_count }}</div></div>
+  <div class="adm-mini"><div class="k">Sudah Unggah Struk</div><div class="v" style="color:#1b5e20">{{ pending_with_proof }}</div></div>
   <div class="adm-mini"><div class="k">Total Tagihan</div><div class="v small">{{ pending_total_fmt }}</div></div>
   <div class="adm-mini"><div class="k">Jaminan Sewa</div><div class="v small">KTP Asli Fisik</div></div>
 </div>
 
-{% if pending_count %}
 <div class="panel" style="margin-top:0">
   <div class="panel-head">
     <div>
-      <div class="panel-title">Menunggu Pembayaran</div>
-      <div class="panel-sub">Urut dari pesanan paling lama</div>
+      <div class="panel-title">Antrean Verifikasi Pembayaran</div>
+      <div class="panel-sub">{{ page_obj.paginator.count }} pesanan cocok dengan filter (urut dari yang paling lama)</div>
     </div>
     <a href="{% url 'accounts:admin_rentals' %}?status=MENUNGGU_PEMBAYARAN" class="panel-link">
-      Lihat sebagai daftar pesanan
+      Lihat di Pesanan Sewa
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </a>
   </div>
+
+  <form class="adm-filters" method="get" action="{% url 'accounts:admin_payments' %}">
+    <div class="adm-field grow">
+      <label for="fq">Cari</label>
+      <input type="text" id="fq" name="q" value="{{ query }}" placeholder="kode booking, nama penyewa, atau WhatsApp">
+    </div>
+    <div class="adm-field">
+      <label for="fproof">Bukti Bayar</label>
+      <select id="fproof" name="proof">
+        <option value="">Semua bukti</option>
+        <option value="yes" {% if proof_filter == 'yes' %}selected{% endif %}>Sudah Ada Struk</option>
+        <option value="no" {% if proof_filter == 'no' %}selected{% endif %}>Belum Ada Struk</option>
+      </select>
+    </div>
+    <div class="adm-field">
+      <label for="fmethod">Metode</label>
+      <select id="fmethod" name="method">
+        <option value="">Semua metode</option>
+        {% for val, label in payment_methods %}
+          <option value="{{ val }}" {% if method_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-xs primary">Terapkan</button>
+    {% if query or proof_filter or method_filter %}
+      <a href="{% url 'accounts:admin_payments' %}" class="adm-reset">Reset</a>
+    {% endif %}
+  </form>
+
+  {% if page_obj.paginator.count %}
   <div class="panel-body">
     {% include "rentals/_staff_orders_table.html" %}
   </div>
-</div>
-{% else %}
-<div class="panel" style="margin-top:0">
+  {% else %}
   <div class="empty-state">
     <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-    <h3>Tidak ada pembayaran tertunda</h3>
-    <p>Semua pesanan sudah dikonfirmasi atau dibatalkan.</p>
+    <h3>Tidak ada pembayaran tertunda yang cocok</h3>
+    <p>Semua pesanan sudah dikonfirmasi, dibatalkan, atau tidak sesuai filter pencarian.</p>
   </div>
+  {% endif %}
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="adm-pager">
+    <span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+    <div class="adm-pager-links">
+      {% if page_obj.has_previous %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      {% else %}<span class="adm-page disabled">&lsaquo;</span>{% endif %}
+      {% for num in page_range %}
+        {% if num == page_obj.number %}<span class="adm-page active">{{ num }}</span>
+        {% elif num == "…" %}<span class="adm-page dots">…</span>
+        {% else %}<a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a class="adm-page" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      {% else %}<span class="adm-page disabled">&rsaquo;</span>{% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
-{% endif %}
 
 <div class="rt-alert info" style="margin-top:20px">
   Konfirmasi pembayaran akan <strong>mengurangi stok</strong> alat dan mencatat mutasi
-  <code>RENTED</code> di log inventaris. Membatalkan pesanan yang sudah dikonfirmasi
-  mengembalikan stok secara otomatis.
+  <code>RENTED</code> di log inventaris. Jika struk buram/tidak valid, gunakan tombol
+  <strong>Tolak Struk</strong> agar pelanggan dapat mengunggah ulang tanpa membatalkan kode booking.
 </div>
 
 {% endblock %}

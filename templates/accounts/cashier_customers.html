@@ -25,7 +25,7 @@
         </a>
       </div>
       <div class="top-right">
-        <span class="top-note">Area Operasional — <strong class="text-brand">Kasir</strong></span>
+        <span class="top-note">Area Operasional — <strong class="text-brand">{{ role|default:"Kasir" }}</strong></span>
         <a href="/" class="btn-pill">Lihat Toko
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
@@ -43,6 +43,9 @@
         <ul>
           <li><a href="/" class="nav-link">Beranda</a></li>
           <li><a href="{% url 'catalog:product_list' %}" class="nav-link">Katalog</a></li>
+          {% if role == 'Admin' or user_role == 'Admin' %}
+          <li><a href="{% url 'accounts:admin_dashboard' %}" class="nav-link">Dashboard Admin</a></li>
+          {% endif %}
           <li><a href="{% url 'rentals:staff_order_list' %}" class="nav-link">Pesanan</a></li>
         </ul>
       </nav>
@@ -54,7 +57,13 @@
             <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
           </button>
           <ul class="account-dropdown" id="accountMenu">
+            {% if role == 'Admin' or user_role == 'Admin' %}
+            <li><a href="{% url 'accounts:admin_dashboard' %}">Dashboard Admin</a></li>
+            <li><a href="{% url 'accounts:admin_profile_settings' %}">Pengaturan</a></li>
+            {% else %}
+            <li><a href="{% url 'accounts:cashier_dashboard' %}">Dashboard Kasir</a></li>
             <li><a href="{% url 'accounts:settings' %}">Pengaturan</a></li>
+            {% endif %}
             <li class="divider"></li>
             <li>
               <form method="post" action="{% url 'accounts:logout' %}">

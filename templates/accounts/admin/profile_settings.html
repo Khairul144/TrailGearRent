@@ -1,0 +1,115 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Pengaturan Akun Admin — TrailGear{% endblock %}
+{% block page_title %}Pengaturan Akun Admin{% endblock %}
+{% block page_sub %}Kelola profil dan rotasi password akun @{{ user.username }} tanpa keluar dari Dashboard Admin.{% endblock %}
+
+{% block admin_content %}
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Profil Administrator</div>
+      <div class="panel-sub">Perubahan profil dicatat otomatis ke audit log keamanan.</div>
+    </div>
+  </div>
+  <div class="panel-body pad">
+    <form method="post" action="{% url 'accounts:admin_profile_settings' %}" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="profile">
+      <div class="settings-grid">
+        <div class="form-row">
+          <label>Username</label>
+          <input type="text" value="{{ user.username }}" readonly>
+        </div>
+        <div class="form-row">
+          <label for="admEmail">Email *</label>
+          <input type="email" id="admEmail" name="email" maxlength="254" required
+                 value="{{ profile_form.email.value|default_if_none:'' }}"{% if profile_form.email.errors %} class="input-error"{% endif %}>
+          {% if profile_form.email.errors %}<span class="field-error">{{ profile_form.email.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-row">
+          <label for="admFirst">Nama Depan</label>
+          <input type="text" id="admFirst" name="first_name" maxlength="150"
+                 value="{{ profile_form.first_name.value|default_if_none:'' }}">
+        </div>
+        <div class="form-row">
+          <label for="admLast">Nama Belakang</label>
+          <input type="text" id="admLast" name="last_name" maxlength="150"
+                 value="{{ profile_form.last_name.value|default_if_none:'' }}">
+        </div>
+        <div class="form-row">
+          <label for="admPhone">No. HP / WhatsApp</label>
+          <input type="tel" id="admPhone" name="phone_number" maxlength="20"
+                 value="{{ profile_form.phone_number.value|default_if_none:'' }}"{% if profile_form.phone_number.errors %} class="input-error"{% endif %}>
+          {% if profile_form.phone_number.errors %}<span class="field-error">{{ profile_form.phone_number.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-row full">
+          <label for="admAddr">Alamat</label>
+          <textarea id="admAddr" name="address" maxlength="500">{{ profile_form.address.value|default_if_none:'' }}</textarea>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button type="submit" class="btn-save">Simpan Profil</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:24px">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Ubah Password Admin</div>
+      <div class="panel-sub">Minimal 8 karakter dengan kombinasi huruf besar, huruf kecil, angka, dan simbol. Sesi Anda tetap aktif sesudah rotasi password.</div>
+    </div>
+  </div>
+  <div class="panel-body pad">
+    <form method="post" action="{% url 'accounts:admin_profile_settings' %}" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="password">
+      <div class="settings-grid">
+        <div class="form-row full">
+          <label for="admPassOld">Password Lama *</label>
+          <div class="pass-field">
+            <input type="password" id="admPassOld" name="current_password" maxlength="128" required autocomplete="current-password"{% if password_form.current_password.errors %} class="input-error"{% endif %}>
+            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password lama" aria-pressed="false" title="Tampilkan password lama">
+              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          {% if password_form.current_password.errors %}<span class="field-error">{{ password_form.current_password.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="admPassNew">Password Baru *</label>
+          <div class="pass-field">
+            <input type="password" id="admPassNew" name="new_password" maxlength="128" required autocomplete="new-password"{% if password_form.new_password.errors %} class="input-error"{% endif %}>
+            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password baru" aria-pressed="false" title="Tampilkan password baru">
+              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          {% if password_form.new_password.errors %}<span class="field-error">{{ password_form.new_password.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="admPassConf">Konfirmasi Password Baru *</label>
+          <div class="pass-field">
+            <input type="password" id="admPassConf" name="new_password_confirmation" maxlength="128" required autocomplete="new-password"{% if password_form.new_password_confirmation.errors %} class="input-error"{% endif %}>
+            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan konfirmasi password baru" aria-pressed="false" title="Tampilkan konfirmasi password baru">
+              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          {% if password_form.new_password_confirmation.errors %}<span class="field-error">{{ password_form.new_password_confirmation.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button type="submit" class="btn-save">Perbarui Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

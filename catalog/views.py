@@ -10,12 +10,24 @@ sehingga input pengguna tidak pernah disusun langsung menjadi query.
 """
 
 from datetime import date, datetime, timedelta
+from pathlib import Path
+import re
 
+from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, render
 
 from .models import Category, Product
+
+_SAFE_MEDIA_PRODUCT_RE = re.compile(r"^[a-f0-9]{32}\.(jpg|jpeg|png|webp)$")
+_PRODUCT_MIME = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
 
 PRODUCTS_PER_PAGE = 20  # sama seperti limitPerPage di Foresta
 MAX_SEARCH_LENGTH = 100
@@ -172,3 +184,25 @@ def product_detail(request, slug):
         "related_products": related_products,
     }
     return render(request, "catalog/product_detail.html", context)
+
+
+def product_media_file(request, filename: str):
+    """Layani hanya foto produk tervalidasi (UUID) tanpa mengekspos folder media lain."""
+    fname = (filename or "").strip().lower()
+    if not _SAFE_MEDIA_PRODUCT_RE.fullmatch(fname):
+        raise Http404("Gambar produk tidak ditemukan.")
+
+    products_root = (Path(settings.MEDIA_ROOT) / "products").resolve()
+    target = (products_root / fname).resolve()
+    if target.parent != products_root or not target.is_file():
+        raise Http404("Gambar produk tidak ditemukan.")
+
+    ext = target.suffix.lower()
+    response = FileResponse(
+        target.open("rb"),
+        content_type=_PRODUCT_MIME.get(ext, "application/octet-stream"),
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
+    response["Cache-Control"] = "public, max-age=86400"
+    return response

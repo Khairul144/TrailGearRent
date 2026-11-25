@@ -300,9 +300,27 @@ def dashboard(request):
 ADMIN_PAGE_SIZE = 15
 
 
+def _csv_safe(value) -> str:
+    """Cegah CSV / Formula Injection saat ekspor dibuka di Excel/LibreOffice."""
+    text = str(value if value is not None else "").replace("\r", " ").replace("\n", " ")
+    if text and text[0] in ("=", "+", "-", "@", "\t"):
+        return "'" + text
+    return text
+
+
+def _safe_redirect_target(request, default_route: str):
+    """Validasi parameter `next` agar bebas kerentanan Open Redirect."""
+    nxt = (request.POST.get("next") or request.GET.get("next") or "").strip()
+    if _is_safe_next(request, nxt):
+        return nxt
+    return default_route
+
+
 def _admin_counts() -> dict:
     """Angka badge sidebar admin."""
-    from catalog.models import Product
+    from datetime import timedelta
+    from django.utils import timezone
+    from catalog.models import Category, Product
     from rentals.models import RentalOrder
 
     orders = RentalOrder.objects.all()
@@ -311,6 +329,7 @@ def _admin_counts() -> dict:
         .distinct()
         .count()
     )
+    seven_days_ago = timezone.now() - timedelta(days=7)
     return {
         "badge_open_orders": orders.exclude(
             status__in=[RentalOrder.Status.KEMBALI, RentalOrder.Status.DIBATALKAN]
@@ -320,10 +339,13 @@ def _admin_counts() -> dict:
         ).count(),
         "badge_security": SecurityEvent.objects.exclude(
             status=SecurityEvent.STATUS_SUCCESS
-        ).count(),
+        )
+        .filter(timestamp__gte=seven_days_ago)
+        .count(),
         "badge_users": User.objects.count(),
         "badge_staff": total_staff,
         "badge_products": Product.objects.count(),
+        "badge_categories": Category.objects.count(),
     }
 
 
@@ -360,12 +382,23 @@ def admin_dashboard(request):
         .count()
     )
 
-    revenue = (
+    paid_rental_revenue = (
         RentalOrder.objects.filter(
-            status__in=[RentalOrder.Status.DIAMBIL, RentalOrder.Status.KEMBALI]
+            status__in=[
+                RentalOrder.Status.DIKONFIRMASI,
+                RentalOrder.Status.DIAMBIL,
+                RentalOrder.Status.KEMBALI,
+            ]
         ).aggregate(total=Sum("total_rental_fee"))["total"]
         or 0
     )
+    paid_fine_revenue = (
+        RentalOrder.objects.filter(
+            fine_payment_status=RentalOrder.FinePaymentStatus.LUNAS
+        ).aggregate(total=Sum("total_fine"))["total"]
+        or 0
+    )
+    revenue = paid_rental_revenue + paid_fine_revenue
 
     events = SecurityEvent.objects.select_related("user").order_by("-timestamp")[:6]
 
@@ -439,21 +472,27 @@ def admin_users(request):
 
 @role_required(ROLE_ADMIN)
 def admin_staff(request):
-    """Daftar akun staff (kasir & admin) beserta status aktifnya."""
-    from rentals.models import RentalOrder
-
+    """Daftar akun staff (kasir & admin) beserta metrik operasional riil tanpa N+1."""
     staff = (
         User.objects.filter(groups__name__in=[ROLE_CASHIER, ROLE_ADMIN])
         .prefetch_related("groups")
+        .annotate(returned_count=Count("processed_returns", distinct=True))
         .distinct()
         .order_by("username")
     )
     rows = list(staff)
+    approved_map = dict(
+        SecurityEvent.objects.filter(
+            event_type=SecurityEvent.ORDER_APPROVED,
+            user__in=rows,
+        )
+        .values_list("user_id")
+        .annotate(cnt=Count("id"))
+    )
     for item in rows:
         item.role_name = primary_role(item) or "—"
-        item.order_count = RentalOrder.objects.filter(
-            user=item, status=RentalOrder.Status.KEMBALI
-        ).count()
+        item.approved_count = approved_map.get(item.pk, 0)
+        item.order_count = item.returned_count + item.approved_count
 
     return _admin_render(
         request,
@@ -694,17 +733,18 @@ def admin_user_toggle(request, user_id):
             request,
             f"Akun {target.username} {'diaktifkan' if target.is_active else 'dinonaktifkan'}.",
         )
-    return redirect(request.POST.get("next") or "accounts:admin_users")
+    return redirect(_safe_redirect_target(request, "accounts:admin_users"))
 
 
 @role_required(ROLE_ADMIN)
 def admin_products(request):
-    """Daftar barang + stok, filter kategori & pencarian."""
+    """Daftar barang + stok, filter kategori, status & pencarian."""
     from catalog.models import Category, Product
 
     query = (request.GET.get("q") or "").strip()[:80]
     cat_slug = request.GET.get("cat") or ""
     stock_filter = request.GET.get("stok") or ""
+    status_filter = request.GET.get("status") or ""
 
     products = Product.objects.select_related("category")
     if query:
@@ -719,6 +759,10 @@ def admin_products(request):
         products = products.filter(available_stock__lte=2, available_stock__gt=0)
     elif stock_filter == "out":
         products = products.filter(available_stock=0)
+    if status_filter == "active":
+        products = products.filter(is_active=True)
+    elif status_filter == "inactive":
+        products = products.filter(is_active=False)
 
     paginator = Paginator(products.order_by("category__order", "name"), ADMIN_PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get("page"))
@@ -734,11 +778,302 @@ def admin_products(request):
             "query": query,
             "cat_slug": cat_slug,
             "stock_filter": stock_filter,
+            "status_filter": status_filter,
             "total_products": Product.objects.count(),
+            "total_inactive": Product.objects.filter(is_active=False).count(),
             "total_out": Product.objects.filter(available_stock=0).count(),
             "total_low": Product.objects.filter(
                 available_stock__lte=2, available_stock__gt=0
             ).count(),
+            "page_range": paginator.get_elided_page_range(
+                page_obj.number, on_each_side=1, on_ends=1
+            ),
+        },
+    )
+
+
+@role_required(ROLE_ADMIN)
+def admin_product_form(request, product_id=None):
+    """Tambah atau Edit Barang langsung dari Dashboard Admin (mencatat InventoryLog & SecurityEvent)."""
+    from django.db import transaction
+    from django.shortcuts import get_object_or_404
+    from catalog.forms import ProductForm
+    from catalog.models import InventoryLog, Product
+
+    instance = get_object_or_404(Product, pk=product_id) if product_id else None
+    old_available = instance.available_stock if instance else 0
+
+    if request.method == "POST":
+        form = ProductForm(request.POST, request.FILES, instance=instance)
+        if form.is_valid():
+            with transaction.atomic():
+                obj = form.save()
+                if instance is None:
+                    if obj.available_stock > 0:
+                        InventoryLog.objects.create(
+                            product=obj,
+                            changed_by=request.user,
+                            action=InventoryLog.Action.RESTOCK,
+                            quantity_change=obj.available_stock,
+                            stock_before=0,
+                            stock_after=obj.available_stock,
+                            notes="Barang baru ditambahkan melalui Dashboard Admin",
+                        )
+                    log_event(
+                        request,
+                        SecurityEvent.ADMIN_CATALOG_UPDATED,
+                        SecurityEvent.STATUS_SUCCESS,
+                        user=request.user,
+                        description=(
+                            f"action=add_product product_id={obj.pk} "
+                            f"slug={obj.slug} stock={obj.available_stock}/{obj.total_stock}"
+                        ),
+                    )
+                    messages.success(request, f"Barang '{obj.name}' berhasil ditambahkan.")
+                else:
+                    if obj.available_stock != old_available:
+                        delta = obj.available_stock - old_available
+                        InventoryLog.objects.create(
+                            product=obj,
+                            changed_by=request.user,
+                            action=(
+                                InventoryLog.Action.RESTOCK
+                                if delta > 0
+                                else InventoryLog.Action.ADJUSTMENT
+                            ),
+                            quantity_change=delta,
+                            stock_before=old_available,
+                            stock_after=obj.available_stock,
+                            notes="Pembaruan data barang melalui Dashboard Admin",
+                        )
+                    log_event(
+                        request,
+                        SecurityEvent.ADMIN_CATALOG_UPDATED,
+                        SecurityEvent.STATUS_SUCCESS,
+                        user=request.user,
+                        description=(
+                            f"action=edit_product product_id={obj.pk} "
+                            f"stock={old_available}->{obj.available_stock}/{obj.total_stock} "
+                            f"active={obj.is_active}"
+                        ),
+                    )
+                    messages.success(request, f"Perubahan barang '{obj.name}' berhasil disimpan.")
+            return redirect("accounts:admin_products")
+        messages.error(
+            request,
+            _first_error_message(form) or "Data barang belum valid. Periksa input Anda.",
+        )
+    else:
+        form = ProductForm(
+            instance=instance,
+            initial={"is_active": True, "total_stock": 1, "available_stock": 1}
+            if instance is None
+            else None,
+        )
+
+    recent_logs = (
+        instance.inventory_logs.select_related("changed_by").order_by("-created_at")[:10]
+        if instance
+        else []
+    )
+    return _admin_render(
+        request,
+        "accounts/admin/product_form.html",
+        "products",
+        {
+            "form": form,
+            "product": instance,
+            "is_edit": instance is not None,
+            "recent_logs": recent_logs,
+        },
+    )
+
+
+@role_required(ROLE_ADMIN)
+def admin_product_stock(request, product_id):
+    """Penyesuaian stok cepat (Restock / Rusak / Opname) secara atomik + wajib catatan audit."""
+    from django.db import transaction
+    from django.shortcuts import get_object_or_404
+    from catalog.forms import StockAdjustmentForm
+    from catalog.models import InventoryLog, Product
+
+    product = get_object_or_404(Product.objects.select_related("category"), pk=product_id)
+    form = StockAdjustmentForm(request.POST or None)
+
+    if request.method == "POST":
+        if form.is_valid():
+            act = form.cleaned_data["action"]
+            qty = form.cleaned_data["quantity"]
+            notes = form.cleaned_data["notes"]
+
+            with transaction.atomic():
+                locked = Product.objects.select_for_update().get(pk=product.pk)
+                before_avail = locked.available_stock
+                before_total = locked.total_stock
+
+                if act == InventoryLog.Action.RESTOCK:
+                    after_avail = before_avail + qty
+                    after_total = before_total + qty
+                    delta = qty
+                elif act == InventoryLog.Action.DAMAGED:
+                    if qty > before_avail:
+                        messages.error(
+                            request,
+                            f"Jumlah unit rusak ({qty}) melebihi stok tersedia saat ini ({before_avail}).",
+                        )
+                        return redirect("accounts:admin_product_stock", product_id=product.pk)
+                    after_avail = before_avail - qty
+                    after_total = before_total
+                    delta = -qty
+                else:
+                    # ADJUSTMENT (stok opname: set available_stock langsung)
+                    if qty > before_total:
+                        after_total = qty
+                    else:
+                        after_total = before_total
+                    after_avail = qty
+                    delta = after_avail - before_avail
+
+                locked.available_stock = after_avail
+                locked.total_stock = after_total
+                locked.save(update_fields=["available_stock", "total_stock", "updated_at"])
+
+                InventoryLog.objects.create(
+                    product=locked,
+                    changed_by=request.user,
+                    action=act,
+                    quantity_change=delta,
+                    stock_before=before_avail,
+                    stock_after=after_avail,
+                    notes=notes,
+                )
+                log_event(
+                    request,
+                    SecurityEvent.ADMIN_CATALOG_UPDATED,
+                    SecurityEvent.STATUS_SUCCESS,
+                    user=request.user,
+                    description=(
+                        f"action=stock_adjust mode={act} product_id={locked.pk} "
+                        f"avail={before_avail}->{after_avail} total={before_total}->{after_total} "
+                        f"note={notes[:80]!r}"
+                    ),
+                )
+                messages.success(
+                    request,
+                    f"Stok '{locked.name}' diperbarui ({before_avail} → {after_avail} tersedia).",
+                )
+                return redirect(_safe_redirect_target(request, "accounts:admin_products"))
+        else:
+            messages.error(
+                request,
+                _first_error_message(form) or "Input penyesuaian stok tidak valid.",
+            )
+
+    logs = product.inventory_logs.select_related("changed_by").order_by("-created_at")[:15]
+    return _admin_render(
+        request,
+        "accounts/admin/product_stock.html",
+        "products",
+        {
+            "product": product,
+            "form": form,
+            "logs": logs,
+        },
+    )
+
+
+@role_required(ROLE_ADMIN)
+def admin_categories(request, cat_id=None):
+    """Kelola daftar kategori & tambah/edit kategori langsung dari Dashboard Admin."""
+    from django.shortcuts import get_object_or_404
+    from catalog.forms import CategoryForm
+    from catalog.models import Category
+
+    editing = get_object_or_404(Category, pk=cat_id) if cat_id else None
+
+    if request.method == "POST":
+        form = CategoryForm(request.POST, instance=editing)
+        if form.is_valid():
+            cat = form.save()
+            log_event(
+                request,
+                SecurityEvent.ADMIN_CATALOG_UPDATED,
+                SecurityEvent.STATUS_SUCCESS,
+                user=request.user,
+                description=(
+                    f"action={'edit_category' if editing else 'add_category'} "
+                    f"category_id={cat.pk} slug={cat.slug} active={cat.is_active}"
+                ),
+            )
+            messages.success(
+                request,
+                f"Kategori '{cat.name}' berhasil {'diperbarui' if editing else 'ditambahkan'}.",
+            )
+            return redirect("accounts:admin_categories")
+        messages.error(
+            request,
+            _first_error_message(form) or "Data kategori belum valid.",
+        )
+    else:
+        form = CategoryForm(
+            instance=editing,
+            initial={"is_active": True, "show_in_menu": True, "order": 0}
+            if editing is None
+            else None,
+        )
+
+    categories = Category.objects.annotate(product_count=Count("products")).order_by(
+        "order", "name"
+    )
+    return _admin_render(
+        request,
+        "accounts/admin/categories.html",
+        "categories",
+        {
+            "categories": categories,
+            "form": form,
+            "editing": editing,
+            "total_categories": categories.count(),
+        },
+    )
+
+
+@role_required(ROLE_ADMIN)
+def admin_inventory_logs(request):
+    """Riwayat audit mutasi stok (`InventoryLog`) lengkap dengan filter & pencarian."""
+    from catalog.models import InventoryLog
+
+    query = (request.GET.get("q") or "").strip()[:80]
+    action_filter = request.GET.get("action") or ""
+    valid_actions = dict(InventoryLog.Action.choices)
+
+    logs = InventoryLog.objects.select_related("product", "changed_by").order_by(
+        "-created_at"
+    )
+    if action_filter in valid_actions:
+        logs = logs.filter(action=action_filter)
+    else:
+        action_filter = ""
+    if query:
+        logs = logs.filter(
+            Q(product__name__icontains=query)
+            | Q(notes__icontains=query)
+            | Q(changed_by__username__icontains=query)
+        )
+
+    paginator = Paginator(logs, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return _admin_render(
+        request,
+        "accounts/admin/inventory_logs.html",
+        "inventory_logs",
+        {
+            "page_obj": page_obj,
+            "logs": page_obj.object_list,
+            "query": query,
+            "action_filter": action_filter,
+            "action_choices": InventoryLog.Action.choices,
             "page_range": paginator.get_elided_page_range(
                 page_obj.number, on_each_side=1, on_ends=1
             ),
@@ -786,6 +1121,9 @@ def admin_rentals(request):
                 "pending": RentalOrder.objects.filter(
                     status=RentalOrder.Status.MENUNGGU_PEMBAYARAN
                 ).count(),
+                "confirmed": RentalOrder.objects.filter(
+                    status=RentalOrder.Status.DIKONFIRMASI
+                ).count(),
                 "active": RentalOrder.objects.filter(
                     status=RentalOrder.Status.DIAMBIL
                 ).count(),
@@ -805,26 +1143,63 @@ def admin_rentals(request):
 
 @role_required(ROLE_ADMIN)
 def admin_payments(request):
-    """Pembayaran yang menunggu verifikasi kasir."""
+    """Pembayaran yang menunggu verifikasi kasir/admin + filter struk, metode, pencarian & paginasi."""
     from rentals.models import RentalOrder, rupiah
 
-    pending = (
-        RentalOrder.objects.filter(status=RentalOrder.Status.MENUNGGU_PEMBAYARAN)
-        .select_related("user")
-        .prefetch_related("items__product")
-        .order_by("created_at")
+    query = (request.GET.get("q") or "").strip()[:80]
+    proof_filter = request.GET.get("proof") or ""
+    method_filter = request.GET.get("method") or ""
+    valid_methods = dict(RentalOrder.PaymentMethod.choices)
+
+    base_pending = RentalOrder.objects.filter(
+        status=RentalOrder.Status.MENUNGGU_PEMBAYARAN
     )
-    pending_total = pending.aggregate(total=Sum("grand_total"))["total"] or 0
+    pending_count = base_pending.count()
+    pending_with_proof = base_pending.exclude(payment_proof="").exclude(
+        payment_proof__isnull=True
+    ).count()
+    pending_total = base_pending.aggregate(total=Sum("grand_total"))["total"] or 0
+
+    qs = base_pending.select_related("user").prefetch_related("items__product")
+    if query:
+        qs = qs.filter(
+            Q(order_code__icontains=query)
+            | Q(full_name__icontains=query)
+            | Q(phone_number__icontains=query)
+        )
+    if proof_filter == "yes":
+        qs = qs.exclude(payment_proof="").exclude(payment_proof__isnull=True)
+    elif proof_filter == "no":
+        qs = qs.filter(Q(payment_proof="") | Q(payment_proof__isnull=True))
+    else:
+        proof_filter = ""
+
+    if method_filter in valid_methods:
+        qs = qs.filter(payment_method=method_filter)
+    else:
+        method_filter = ""
+
+    paginator = Paginator(qs.order_by("created_at"), ADMIN_PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get("page"))
 
     return _admin_render(
         request,
         "accounts/admin/payments.html",
         "payments",
         {
-            "open_orders": pending,
-            "pending_count": pending.count(),
+            "page_obj": page_obj,
+            "open_orders": page_obj.object_list,
+            "pending_count": pending_count,
+            "pending_with_proof": pending_with_proof,
             "pending_total": pending_total,
             "pending_total_fmt": rupiah(pending_total),
+            "query": query,
+            "proof_filter": proof_filter,
+            "method_filter": method_filter,
+            "payment_methods": RentalOrder.PaymentMethod.choices,
+            "page_range": paginator.get_elided_page_range(
+                page_obj.number, on_each_side=1, on_ends=1
+            ),
         },
     )
 
@@ -947,11 +1322,16 @@ def _build_user_access_review():
 
 @role_required(ROLE_ADMIN)
 def admin_security(request):
-    """Log keamanan lengkap dengan filter + Kontrol Buka Blokir IP/Akun + UAR."""
+    """Log keamanan lengkap dengan filter + pencarian + ekspor CSV + Kontrol Buka Blokir + UAR."""
+    import csv
+    from datetime import timedelta
+    from django.http import HttpResponse
     from django.utils import timezone
 
     status_filter = request.GET.get("status") or ""
     type_filter = request.GET.get("event") or ""
+    period_filter = request.GET.get("period") or ""
+    query = (request.GET.get("q") or "").strip()[:80]
 
     events = SecurityEvent.objects.select_related("user").order_by("-timestamp")
     if status_filter in dict(SecurityEvent.STATUS_CHOICES):
@@ -963,6 +1343,46 @@ def admin_security(request):
         events = events.filter(event_type=type_filter)
     else:
         type_filter = ""
+
+    now = timezone.now()
+    if period_filter == "24h":
+        events = events.filter(timestamp__gte=now - timedelta(hours=24))
+    elif period_filter == "7d":
+        events = events.filter(timestamp__gte=now - timedelta(days=7))
+    elif period_filter == "30d":
+        events = events.filter(timestamp__gte=now - timedelta(days=30))
+    else:
+        period_filter = ""
+
+    if query:
+        events = events.filter(
+            Q(ip_address__icontains=query)
+            | Q(user__username__icontains=query)
+            | Q(description__icontains=query)
+        )
+
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            f'attachment; filename="trailgear_security_events_{timezone.localdate():%Y%m%d}.csv"'
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response.write("\ufeff")
+        writer = csv.writer(response)
+        writer.writerow(["Waktu (WIB)", "Event", "Status", "Username", "IP", "Keterangan"])
+        for e in events[:2000]:
+            local_ts = timezone.localtime(e.timestamp).strftime("%Y-%m-%d %H:%M:%S")
+            writer.writerow(
+                [
+                    _csv_safe(local_ts),
+                    _csv_safe(e.event_type),
+                    _csv_safe(e.status),
+                    _csv_safe(e.user.username if e.user else ""),
+                    _csv_safe(e.ip_address or ""),
+                    _csv_safe(e.description or ""),
+                ]
+            )
+        return response
 
     paginator = Paginator(events, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
@@ -997,6 +1417,8 @@ def admin_security(request):
             "status_choices": SecurityEvent.STATUS_CHOICES,
             "status_filter": status_filter,
             "type_filter": type_filter,
+            "period_filter": period_filter,
+            "query": query,
             "rate_limit_rows": rate_limit_rows,
             "locked_users": locked_users,
             "uar_app_rows": uar_app_rows,
@@ -1013,6 +1435,8 @@ def admin_security(request):
 @require_http_methods(["POST"])
 def admin_reset_ratelimit(request):
     """Buka blokir / reset rate limit IP atau buka kunci akun langsung dari web."""
+    import ipaddress
+
     mode = (request.POST.get("mode") or "").strip()
     ip = (request.POST.get("ip") or "").strip()
     unlock_user_id = (request.POST.get("unlock_user_id") or "").strip()
@@ -1036,7 +1460,15 @@ def admin_reset_ratelimit(request):
             target.failed_login_attempts = 0
             target.locked_until = None
             target.save(update_fields=["failed_login_attempts", "locked_until"])
-            ratelimit.reset_ip("127.0.0.1", [target.username, target.email])
+            ip_candidates = list(
+                SecurityEvent.objects.filter(user=target)
+                .exclude(ip_address__isnull=True)
+                .values_list("ip_address", flat=True)
+                .distinct()[:10]
+            )
+            for cand_ip in set(ip_candidates + ["127.0.0.1", ratelimit.client_ip(request)]):
+                if cand_ip:
+                    ratelimit.reset_ip(cand_ip, [target.username, target.email])
             log_event(
                 request,
                 SecurityEvent.ADMIN_SECURITY_OVERRIDE,
@@ -1049,25 +1481,30 @@ def admin_reset_ratelimit(request):
             )
             messages.success(
                 request,
-                f"Kunci akun @{target.username} telah dibuka & percobaan gagal direset ke 0.",
+                f"Kunci akun @{target.username} telah dibuka & rate limit seluruh IP terkait direset.",
             )
         else:
             messages.error(request, "Akun tidak ditemukan.")
     elif ip:
+        try:
+            clean_ip = str(ipaddress.ip_address(ip))
+        except ValueError:
+            messages.error(request, "Format alamat IP tidak valid.")
+            return redirect("accounts:admin_security")
         identifiers = list(User.objects.values_list("username", flat=True)) + list(
             User.objects.values_list("email", flat=True)
         )
-        ratelimit.reset_ip(ip, identifiers)
+        ratelimit.reset_ip(clean_ip, identifiers)
         log_event(
             request,
             SecurityEvent.ADMIN_SECURITY_OVERRIDE,
             SecurityEvent.STATUS_SUCCESS,
             user=request.user,
-            description=f"action=reset_ratelimit_ip target_ip={ip}",
+            description=f"action=reset_ratelimit_ip target_ip={clean_ip}",
         )
         messages.success(
             request,
-            f"Rate limit (registrasi & login) untuk IP {ip} berhasil dihapus.",
+            f"Rate limit (registrasi & login) untuk IP {clean_ip} berhasil dihapus.",
         )
     else:
         messages.error(request, "Masukkan alamat IP atau pilih aksi reset.")
@@ -1077,19 +1514,123 @@ def admin_reset_ratelimit(request):
 
 @role_required(ROLE_ADMIN)
 def admin_reports(request):
-    """Laporan ringkas: pendapatan, status pesanan, produk terlaris."""
+    """Laporan pendapatan sewa & denda, filter periode, produk terlaris & ekspor CSV."""
+    import csv
+    from datetime import datetime, timedelta
+    from django.http import HttpResponse
+    from django.utils import timezone
     from catalog.models import Product
     from rentals.models import RentalOrder, RentalOrderItem, rupiah
 
-    finished = RentalOrder.objects.filter(
-        status__in=[RentalOrder.Status.DIAMBIL, RentalOrder.Status.KEMBALI]
+    period = (request.GET.get("period") or "all").strip()
+    raw_start = (request.GET.get("start") or "").strip()
+    raw_end = (request.GET.get("end") or "").strip()
+    today = timezone.localdate()
+
+    start_date = None
+    end_date = None
+    if period == "today":
+        start_date = today
+        end_date = today
+    elif period == "7d":
+        start_date = today - timedelta(days=6)
+        end_date = today
+    elif period == "30d":
+        start_date = today - timedelta(days=29)
+        end_date = today
+    elif period == "month":
+        start_date = today.replace(day=1)
+        end_date = today
+    elif period == "custom":
+        try:
+            if raw_start:
+                start_date = datetime.strptime(raw_start, "%Y-%m-%d").date()
+            if raw_end:
+                end_date = datetime.strptime(raw_end, "%Y-%m-%d").date()
+            if start_date and end_date and start_date > end_date:
+                start_date, end_date = end_date, start_date
+        except ValueError:
+            start_date = None
+            end_date = None
+    else:
+        period = "all"
+
+    orders_qs = RentalOrder.objects.all()
+    if start_date:
+        orders_qs = orders_qs.filter(created_at__date__gte=start_date)
+    if end_date:
+        orders_qs = orders_qs.filter(created_at__date__lte=end_date)
+
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            f'attachment; filename="trailgear_laporan_sewa_{today:%Y%m%d}.csv"'
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response.write("\ufeff")
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "Kode Booking",
+                "Waktu Dibuat",
+                "Penyewa",
+                "Username",
+                "Telepon",
+                "Tanggal Ambil",
+                "Rencana Kembali",
+                "Status",
+                "Metode Bayar",
+                "Biaya Sewa (Rp)",
+                "Total Denda (Rp)",
+                "Status Denda",
+            ]
+        )
+        for o in orders_qs.select_related("user").order_by("-created_at")[:5000]:
+            writer.writerow(
+                [
+                    _csv_safe(o.order_code),
+                    _csv_safe(timezone.localtime(o.created_at).strftime("%Y-%m-%d %H:%M")),
+                    _csv_safe(o.full_name),
+                    _csv_safe(o.user.username if o.user_id else ""),
+                    _csv_safe(o.phone_number),
+                    _csv_safe(o.pickup_plan_date.isoformat()),
+                    _csv_safe(o.return_plan_date.isoformat()),
+                    _csv_safe(o.get_status_display()),
+                    _csv_safe(o.get_payment_method_display()),
+                    o.total_rental_fee,
+                    o.total_fine,
+                    _csv_safe(o.get_fine_payment_status_display()),
+                ]
+            )
+        return response
+
+    paid_statuses = [
+        RentalOrder.Status.DIKONFIRMASI,
+        RentalOrder.Status.DIAMBIL,
+        RentalOrder.Status.KEMBALI,
+    ]
+    rental_revenue = (
+        orders_qs.filter(status__in=paid_statuses).aggregate(
+            rental=Sum("total_rental_fee")
+        )["rental"]
+        or 0
     )
-    totals = finished.aggregate(
-        rental=Sum("total_rental_fee"),
+    fine_paid = (
+        orders_qs.filter(
+            fine_payment_status=RentalOrder.FinePaymentStatus.LUNAS
+        ).aggregate(total=Sum("total_fine"))["total"]
+        or 0
     )
+    fine_unpaid = (
+        orders_qs.filter(
+            fine_payment_status=RentalOrder.FinePaymentStatus.MENUNGGU_PEMBAYARAN
+        ).aggregate(total=Sum("total_fine"))["total"]
+        or 0
+    )
+    revenue = rental_revenue + fine_paid
 
     by_status = (
-        RentalOrder.objects.values("status")
+        orders_qs.values("status")
         .annotate(jumlah=Count("id"), nilai=Sum("grand_total"))
         .order_by("status")
     )
@@ -1105,6 +1646,7 @@ def admin_reports(request):
         for row in by_status
     ]
 
+    item_qs = RentalOrderItem.objects.filter(order__in=orders_qs, order__status__in=paid_statuses)
     top_products = [
         {
             "name": row["product__name"],
@@ -1112,18 +1654,10 @@ def admin_reports(request):
             "nilai": row["nilai"] or 0,
             "nilai_fmt": rupiah(row["nilai"] or 0),
         }
-        for row in RentalOrderItem.objects.exclude(
-            order__status__in=[
-                RentalOrder.Status.DIBATALKAN,
-                RentalOrder.Status.MENUNGGU_PEMBAYARAN,
-            ]
-        )
-        .values("product__name")
+        for row in item_qs.values("product__name")
         .annotate(unit=Sum("quantity"), nilai=Sum("subtotal"))
-        .order_by("-unit")[:5]
+        .order_by("-unit")[:8]
     ]
-
-    revenue = totals["rental"] or 0
 
     return _admin_render(
         request,
@@ -1132,11 +1666,77 @@ def admin_reports(request):
         {
             "revenue": revenue,
             "revenue_fmt": rupiah(revenue),
-            "order_count": RentalOrder.objects.count(),
+            "rental_revenue_fmt": rupiah(rental_revenue),
+            "fine_paid": fine_paid,
+            "fine_paid_fmt": rupiah(fine_paid),
+            "fine_unpaid": fine_unpaid,
+            "fine_unpaid_fmt": rupiah(fine_unpaid),
+            "order_count": orders_qs.count(),
             "status_rows": status_rows,
             "top_products": top_products,
-            "total_products": Product.objects.count(),
+            "total_products": Product.objects.filter(is_active=True).count(),
+            "period": period,
+            "start_val": start_date.isoformat() if start_date else "",
+            "end_val": end_date.isoformat() if end_date else "",
         },
+    )
+
+
+@role_required(ROLE_ADMIN)
+@never_cache
+def admin_profile_settings(request):
+    """Pengaturan profil & ubah password khusus Admin tetap di dalam layout Dashboard Admin."""
+    profile_form = ProfileForm(instance=request.user)
+    password_form = PasswordChangeForm(request.user)
+
+    if request.method == "POST":
+        form_type = request.POST.get("form_type", "profile")
+        if form_type == "password":
+            password_form = PasswordChangeForm(request.user, request.POST)
+            if password_form.is_valid():
+                request.user.set_password(password_form.cleaned_data["new_password"])
+                request.user.save(update_fields=["password", "password_changed_at"])
+                update_session_auth_hash(request, request.user)
+                log_event(
+                    request,
+                    SecurityEvent.PASSWORD_CHANGED,
+                    SecurityEvent.STATUS_SUCCESS,
+                    user=request.user,
+                    description=f"user_id={request.user.pk} (via pengaturan admin)",
+                )
+                messages.success(request, "Password akun Admin berhasil diubah.")
+                password_form = PasswordChangeForm(request.user)
+            else:
+                messages.error(
+                    request,
+                    _first_error_message(password_form)
+                    or "Password gagal diubah. Periksa kembali input Anda.",
+                )
+        else:
+            profile_form = ProfileForm(request.POST, instance=request.user)
+            if profile_form.is_valid():
+                profile_form.save()
+                log_event(
+                    request,
+                    SecurityEvent.ADMIN_USER_UPDATED,
+                    SecurityEvent.STATUS_SUCCESS,
+                    user=request.user,
+                    description=f"action=self_profile_update user_id={request.user.pk}",
+                )
+                messages.success(request, "Profil Admin berhasil diperbarui.")
+                profile_form = ProfileForm(instance=request.user)
+            else:
+                messages.error(
+                    request,
+                    _first_error_message(profile_form)
+                    or "Perubahan profil gagal disimpan.",
+                )
+
+    return _admin_render(
+        request,
+        "accounts/admin/profile_settings.html",
+        "settings",
+        {"profile_form": profile_form, "password_form": password_form},
     )
 
 

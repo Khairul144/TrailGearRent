@@ -1,0 +1,125 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Kategori Alat — Admin TrailGear{% endblock %}
+{% block page_title %}Kategori Alat{% endblock %}
+{% block page_sub %}Kelola pengelompokan produk di katalog dan menu navigasi pelanggan.{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'accounts:admin_products' %}" class="btn-xs">Daftar Barang</a>
+  <a href="{% url 'accounts:admin_product_add' %}" class="btn-xs primary">+ Tambah Barang</a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="adm-split">
+  <!-- Daftar Kategori -->
+  <div class="panel" style="margin-top:0">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Daftar Kategori ({{ total_categories }})</div>
+        <div class="panel-sub">Urut berdasarkan nomor urutan tampil</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>Urut</th>
+              <th>Kategori</th>
+              <th>Produk</th>
+              <th>Menu</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in categories %}
+            <tr>
+              <td class="mono">{{ c.order }}</td>
+              <td>
+                <div class="row-strong">{{ c.name }}</div>
+                <small class="adm-muted">/{{ c.slug }}/</small>
+              </td>
+              <td class="mono">
+                <a href="{% url 'accounts:admin_products' %}?cat={{ c.slug }}">{{ c.product_count }}</a>
+              </td>
+              <td>{% if c.show_in_menu %}<span class="badge active">Tampil</span>{% else %}<span class="badge cancelled">Sembunyi</span>{% endif %}</td>
+              <td>{% if c.is_active %}<span class="badge active">Aktif</span>{% else %}<span class="badge rejected">Nonaktif</span>{% endif %}</td>
+              <td>
+                <a class="btn-xs" href="{% url 'accounts:admin_category_edit' c.pk %}">Edit</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">Belum ada kategori terdaftar.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Tambah / Edit Kategori -->
+  <div class="panel" style="margin-top:0">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">{% if editing %}Edit Kategori: {{ editing.name }}{% else %}Tambah Kategori Baru{% endif %}</div>
+        <div class="panel-sub">{% if editing %}Perbarui nama, urutan, atau visibilitas kategori.{% else %}Buat kategori peralatan baru.{% endif %}</div>
+      </div>
+      {% if editing %}
+        <a href="{% url 'accounts:admin_categories' %}" class="btn-xs">+ Mode Tambah</a>
+      {% endif %}
+    </div>
+    <div class="panel-body pad">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="form-row" style="margin-bottom:14px">
+          <label for="catName">Nama Kategori *</label>
+          <input type="text" id="catName" name="name" maxlength="100" required placeholder="Contoh: Tenda & Shelter"
+                 value="{{ form.name.value|default_if_none:'' }}"{% if form.name.errors %} class="input-error"{% endif %}>
+          {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row" style="margin-bottom:14px">
+          <label for="catSlug">Slug URL <small style="font-weight:500;color:#777">(opsional)</small></label>
+          <input type="text" id="catSlug" name="slug" maxlength="120" placeholder="otomatis-dari-nama"
+                 value="{{ form.slug.value|default_if_none:'' }}"{% if form.slug.errors %} class="input-error"{% endif %}>
+          {% if form.slug.errors %}<span class="field-error">{{ form.slug.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row" style="margin-bottom:14px">
+          <label for="catOrder">Urutan Tampil</label>
+          <input type="number" id="catOrder" name="order" min="0" max="9999"
+                 value="{{ form.order.value|default_if_none:'0' }}">
+        </div>
+
+        <div class="form-row" style="margin-bottom:14px">
+          <label for="catDesc">Deskripsi Singkat</label>
+          <textarea id="catDesc" name="description" rows="3" placeholder="Keterangan kategori (opsional)">{{ form.description.value|default_if_none:'' }}</textarea>
+        </div>
+
+        <div class="form-row" style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <input type="checkbox" name="show_in_menu" value="1" style="width:18px;height:18px" {% if form.show_in_menu.value %}checked{% endif %}>
+            <span>Tampilkan di dropdown menu Kategori</span>
+          </label>
+        </div>
+
+        <div class="form-row" style="margin-bottom:16px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <input type="checkbox" name="is_active" value="1" style="width:18px;height:18px" {% if form.is_active.value %}checked{% endif %}>
+            <span>Kategori Aktif</span>
+          </label>
+        </div>
+
+        <div class="settings-actions">
+          <button type="submit" class="btn-save">{% if editing %}Simpan Perubahan{% else %}Tambah Kategori{% endif %}</button>
+          {% if editing %}<a href="{% url 'accounts:admin_categories' %}" class="btn-ghost">Batal</a>{% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

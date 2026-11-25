@@ -72,7 +72,7 @@
                   <div class="strong">{{ item.product.name }}</div>
                   <small style="color:var(--neutral-500)">{{ item.product.category.name }}</small>
                   {% if order.actual_return_date %}
-                    <br><small style="color:var(--brand-dark);font-weight:700">Kondisi kembali: {{ item.get_condition_at_return_display }}{% if item.item_damage_fee %} (Biaya: Rp {{ item.item_damage_fee|floatformat:0 }}){% endif %}</small>
+                    <br><small style="color:var(--brand-dark);font-weight:700">Kondisi kembali: {{ item.get_condition_at_return_display }}{% if item.item_damage_fee %} (Biaya: {{ item.formatted_damage_fee }}){% endif %}</small>
                   {% endif %}
                 </td>
                 <td class="num">{{ item.formatted_unit_price }}</td>

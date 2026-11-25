@@ -6,9 +6,17 @@
 {% block page_sub %}Ringkasan singkat sistem. Detail tiap menu ada di halaman terpisah.{% endblock %}
 
 {% block page_actions %}
+  <button type="button" class="btn-xs" data-open-scan-modal>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h6"/></svg>
+    Scan / Cari Booking
+  </button>
   <a href="{% url 'accounts:admin_reports' %}" class="btn-xs">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 3-4 3 3 5-7"/></svg>
     Laporan
+  </a>
+  <a href="{% url 'accounts:admin_product_add' %}" class="btn-xs">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    Tambah Barang
   </a>
   <a href="{% url 'accounts:admin_user_add' %}?role=Cashier" class="btn-xs primary">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -60,7 +68,7 @@
       </span>
     </div>
     <div class="kpi-value" style="font-size:22px">{{ revenue_fmt }}</div>
-    <div class="kpi-meta">akumulasi sewa (aktif + selesai)</div>
+    <div class="kpi-meta">sewa lunas + denda terbayar</div>
   </div>
 </div>
 

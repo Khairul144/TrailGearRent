@@ -1631,5 +1631,271 @@ class AdminUserManageAndRateLimitResetTests(TestCase):
         )
 
 
+class AdminDashboardComprehensiveSecurityTests(TestCase):
+    """Pengujian fitur baru & perbaikan bug Dashboard Admin beserta kontrol keamanannya."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from accounts.roles import ROLE_ADMIN, ROLE_CASHIER, ROLE_CUSTOMER, assign_role
+        from catalog.models import Category, Product
+
+        cls.admin = User.objects.create_user(
+            username="adm_sec", email="adm_sec@example.com", password=GOOD_PASSWORD
+        )
+        assign_role(cls.admin, ROLE_ADMIN)
+
+        cls.cashier = User.objects.create_user(
+            username="kasir_sec", email="kasir_sec@example.com", password=GOOD_PASSWORD
+        )
+        assign_role(cls.cashier, ROLE_CASHIER)
+
+        cls.customer = User.objects.create_user(
+            username="cust_sec", email="cust_sec@example.com", password=GOOD_PASSWORD
+        )
+        assign_role(cls.customer, ROLE_CUSTOMER)
+
+        cls.category = Category.objects.create(name="Tenda Uji", slug="tenda-uji")
+        cls.product = Product.objects.create(
+            category=cls.category,
+            name="Tenda Dome 4P",
+            slug="tenda-dome-4p",
+            price_per_day=45000,
+            total_stock=5,
+            available_stock=5,
+        )
+
+    def test_new_admin_routes_enforce_rbac_for_customer_and_cashier(self):
+        protected_urls = [
+            reverse("accounts:admin_product_add"),
+            reverse("accounts:admin_product_edit", args=[self.product.pk]),
+            reverse("accounts:admin_product_stock", args=[self.product.pk]),
+            reverse("accounts:admin_categories"),
+            reverse("accounts:admin_inventory_logs"),
+            reverse("accounts:admin_profile_settings"),
+        ]
+        for actor in (self.customer, self.cashier):
+            self.client.force_login(actor)
+            for url in protected_urls:
+                res = self.client.get(url)
+                self.assertEqual(res.status_code, 403, msg=f"{actor.username} -> {url}")
+
+        self.assertGreaterEqual(
+            SecurityEvent.objects.filter(event_type=SecurityEvent.ACCESS_DENIED).count(),
+            len(protected_urls) * 2,
+        )
+
+    def test_native_product_crud_image_validation_and_stock_audit(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from catalog.models import InventoryLog, Product
+
+        self.client.force_login(self.admin)
+
+        # 1. File palsu (script di-rename .jpg) wajib ditolak oleh validasi magic bytes
+        fake_img = SimpleUploadedFile(
+            "evil.jpg", b"<?php system($_GET['x']); ?>", content_type="image/jpeg"
+        )
+        bad_res = self.client.post(
+            reverse("accounts:admin_product_add"),
+            {
+                "category": self.category.pk,
+                "name": "Produk Berbahaya",
+                "price_per_day": 20000,
+                "price_type": "FLAT",
+                "total_stock": 2,
+                "available_stock": 2,
+                "condition": "SANGAT_BAIK",
+                "image": fake_img,
+                "is_active": "1",
+            },
+        )
+        self.assertEqual(bad_res.status_code, 200)
+        self.assertFalse(Product.objects.filter(name="Produk Berbahaya").exists())
+
+        # 2. Path traversal pada image_filename wajib ditolak
+        trav_res = self.client.post(
+            reverse("accounts:admin_product_add"),
+            {
+                "category": self.category.pk,
+                "name": "Produk Traversal",
+                "price_per_day": 20000,
+                "price_type": "FLAT",
+                "total_stock": 2,
+                "available_stock": 2,
+                "condition": "SANGAT_BAIK",
+                "image_filename": "../secret.jpg",
+                "is_active": "1",
+            },
+        )
+        self.assertEqual(trav_res.status_code, 200)
+        self.assertFalse(Product.objects.filter(name="Produk Traversal").exists())
+
+        # 3. Tambah barang valid mencatat InventoryLog & ADMIN_CATALOG_UPDATED
+        ok_res = self.client.post(
+            reverse("accounts:admin_product_add"),
+            {
+                "category": self.category.pk,
+                "name": "Kompor Portable Baru",
+                "price_per_day": 15000,
+                "price_type": "FLAT",
+                "total_stock": 4,
+                "available_stock": 4,
+                "condition": "SANGAT_BAIK",
+                "is_active": "1",
+            },
+        )
+        self.assertRedirects(ok_res, reverse("accounts:admin_products"))
+        created = Product.objects.get(name="Kompor Portable Baru")
+        self.assertTrue(
+            InventoryLog.objects.filter(
+                product=created, action=InventoryLog.Action.RESTOCK, quantity_change=4
+            ).exists()
+        )
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.admin,
+                event_type=SecurityEvent.ADMIN_CATALOG_UPDATED,
+                description__contains=f"product_id={created.pk}",
+            ).exists()
+        )
+
+        # 4. Penyesuaian stok cepat (DAMAGED) mengurangi stok tersedia & wajib alasan audit
+        adj_res = self.client.post(
+            reverse("accounts:admin_product_stock", args=[created.pk]),
+            {
+                "action": InventoryLog.Action.DAMAGED,
+                "quantity": 1,
+                "notes": "Pemantik kompor rusak masuk servis",
+            },
+        )
+        self.assertRedirects(adj_res, reverse("accounts:admin_products"))
+        created.refresh_from_db()
+        self.assertEqual(created.available_stock, 3)
+        self.assertEqual(created.total_stock, 4)
+        self.assertTrue(
+            InventoryLog.objects.filter(
+                product=created,
+                action=InventoryLog.Action.DAMAGED,
+                quantity_change=-1,
+                stock_before=4,
+                stock_after=3,
+            ).exists()
+        )
+
+    def test_reject_payment_proof_and_maker_checker_enforcement(self):
+        from datetime import date, timedelta
+        from django.core.files.base import ContentFile
+        from rentals.models import RentalOrder, RentalOrderItem
+
+        today = date.today()
+        # Pesanan milik kasir (untuk uji Maker-Checker self-reject)
+        kasir_order = RentalOrder.objects.create(
+            user=self.cashier,
+            full_name="Kasir Penyewa",
+            phone_number="081234567890",
+            id_card_number="3201010101010001",
+            pickup_plan_date=today + timedelta(days=1),
+            return_plan_date=today + timedelta(days=3),
+            total_rental_fee=90000,
+            grand_total=90000,
+        )
+        kasir_order.payment_proof.save(
+            "valid_test.png",
+            ContentFile(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"),
+            save=True,
+        )
+
+        # Kasir mencoba menolak bukti pesanannya sendiri -> diblokir Maker-Checker
+        self.client.force_login(self.cashier)
+        self.client.post(
+            reverse("rentals:staff_reject_proof", args=[kasir_order.order_code]),
+            {"reason": "Coba tolak sendiri"},
+        )
+        kasir_order.refresh_from_db()
+        self.assertTrue(kasir_order.has_payment_proof())
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.cashier,
+                event_type=SecurityEvent.MAKER_CHECKER_VIOLATION,
+                description__contains="action=reject_proof",
+            ).exists()
+        )
+
+        # Admin menolak bukti pesanan kasir -> sukses & tercatat PAYMENT_PROOF_REJECTED
+        self.client.force_login(self.admin)
+        self.client.post(
+            reverse("rentals:staff_reject_proof", args=[kasir_order.order_code]),
+            {"reason": "Nominal buram"},
+        )
+        kasir_order.refresh_from_db()
+        self.assertFalse(kasir_order.has_payment_proof())
+        self.assertEqual(kasir_order.status, RentalOrder.Status.MENUNGGU_PEMBAYARAN)
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.admin,
+                event_type=SecurityEvent.PAYMENT_PROOF_REJECTED,
+                status=SecurityEvent.STATUS_SUCCESS,
+            ).exists()
+        )
+
+        # Verifikasi kolom Harga / Hari pada Nota Booking tampil (tidak kosong)
+        RentalOrderItem.objects.create(
+            order=kasir_order,
+            product=self.product,
+            unit_price=45000,
+            quantity=1,
+            duration_days=2,
+        )
+        detail_res = self.client.get(
+            reverse("rentals:order_detail", args=[kasir_order.order_code])
+        )
+        self.assertContains(detail_res, "Rp 45.000")
+
+    def test_open_redirect_invalid_ip_and_csv_formula_injection_protection(self):
+        from datetime import date, timedelta
+        from rentals.models import RentalOrder
+
+        self.client.force_login(self.admin)
+
+        # 1. Open redirect pada admin_user_toggle diblokir
+        redir_res = self.client.post(
+            reverse("accounts:admin_user_toggle", args=[self.customer.pk]),
+            {"next": "https://evil.example/phish"},
+        )
+        self.assertEqual(redir_res.status_code, 302)
+        self.assertNotIn("evil.example", redir_res.url)
+
+        # 2. Input IP tidak valid pada admin_reset_ratelimit ditolak tanpa menulis log palsu
+        before_cnt = SecurityEvent.objects.filter(
+            event_type=SecurityEvent.ADMIN_SECURITY_OVERRIDE
+        ).count()
+        self.client.post(
+            reverse("accounts:admin_reset_ratelimit"),
+            {"ip": "bukan-ip; DROP TABLE"},
+        )
+        after_cnt = SecurityEvent.objects.filter(
+            event_type=SecurityEvent.ADMIN_SECURITY_OVERRIDE
+        ).count()
+        self.assertEqual(before_cnt, after_cnt)
+
+        # 3. Ekspor CSV Laporan menetralkan formula Excel (=CMD|...)
+        today = date.today()
+        RentalOrder.objects.create(
+            user=self.customer,
+            full_name="=CMD|' /C calc'!A0",
+            phone_number="081234567890",
+            id_card_number="3201010101010002",
+            pickup_plan_date=today + timedelta(days=1),
+            return_plan_date=today + timedelta(days=2),
+            status=RentalOrder.Status.DIKONFIRMASI,
+            total_rental_fee=45000,
+            grand_total=45000,
+        )
+        csv_res = self.client.get(reverse("accounts:admin_reports") + "?export=csv")
+        self.assertEqual(csv_res.status_code, 200)
+        csv_body = csv_res.content.decode("utf-8-sig")
+        self.assertIn("'=CMD|", csv_body)
+
+
+
 
 

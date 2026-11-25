@@ -542,5 +542,13 @@ class RentalOrderItem(models.Model):
         return self.unit_price * self.duration_days * self.quantity
 
     @property
+    def formatted_unit_price(self) -> str:
+        return rupiah(self.unit_price)
+
+    @property
+    def formatted_damage_fee(self) -> str:
+        return rupiah(self.item_damage_fee)
+
+    @property
     def formatted_subtotal(self) -> str:
         return rupiah(self.subtotal)

@@ -95,7 +95,8 @@
               <div class="table-actions">
                 <a class="btn-xs" href="{% url 'accounts:admin_user_manage' u.pk %}">Kelola</a>
                 {% if u.pk != user.pk %}
-                <form method="post" action="{% url 'accounts:admin_user_toggle' u.pk %}">
+                <form method="post" action="{% url 'accounts:admin_user_toggle' u.pk %}"
+                      onsubmit="return confirm('{% if u.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %} akun @{{ u.username }}?');">
                   {% csrf_token %}
                   <input type="hidden" name="next" value="{{ request.get_full_path }}">
                   <button type="submit" class="btn-xs {% if u.is_active %}danger{% endif %}">

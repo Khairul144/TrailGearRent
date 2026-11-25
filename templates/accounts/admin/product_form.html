@@ -1,0 +1,185 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}{% if is_edit %}Edit {{ product.name }}{% else %}Tambah Barang{% endif %} — Admin TrailGear{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Barang{% else %}Tambah Barang Baru{% endif %}{% endblock %}
+{% block page_sub %}{% if is_edit %}Perbarui informasi, harga sewa, foto, dan status aktif peralatan.{% else %}Tambahkan peralatan outdoor baru ke katalog TrailGear.{% endif %}{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'accounts:admin_products' %}" class="btn-xs">&larr; Daftar Barang</a>
+  {% if is_edit %}
+    <a href="{% url 'accounts:admin_product_stock' product.pk %}" class="btn-xs primary">Atur / Restock Stok</a>
+    <a href="{% url 'catalog:product_detail' product.slug %}" class="btn-xs" target="_blank" rel="noopener">Lihat di Katalog</a>
+  {% endif %}
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">{% if is_edit %}Data Peralatan: {{ product.name }}{% else %}Formulir Peralatan Baru{% endif %}</div>
+      <div class="panel-sub">Unggahan gambar dibatasi JPG/PNG/WEBP (maks 5 MB, divalidasi magic bytes). Perubahan stok tercatat otomatis di Log Inventaris.</div>
+    </div>
+  </div>
+  <div class="panel-body pad">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="settings-grid">
+        <div class="form-row">
+          <label for="id_name">Nama Peralatan *</label>
+          <input type="text" id="id_name" name="name" maxlength="180" required placeholder="Contoh: Tenda Kapasitas 4 Orang"
+                 value="{{ form.name.value|default_if_none:'' }}"{% if form.name.errors %} class="input-error"{% endif %}>
+          {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="id_category">Kategori *</label>
+          <select id="id_category" name="category" required>
+            <option value="">— Pilih Kategori —</option>
+            {% for cat in form.fields.category.queryset %}
+              <option value="{{ cat.pk }}" {% if form.category.value|stringformat:"s" == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+          {% if form.category.errors %}<span class="field-error">{{ form.category.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="id_brand_name">Merek / Brand</label>
+          <input type="text" id="id_brand_name" name="brand_name" maxlength="100" placeholder="Contoh: Eiger / Rei / Consina"
+                 value="{{ form.brand_name.value|default_if_none:'' }}">
+        </div>
+
+        <div class="form-row">
+          <label for="id_slug">Slug URL <small style="font-weight:500;color:#777">(kosongkan untuk otomatis)</small></label>
+          <input type="text" id="id_slug" name="slug" maxlength="180" placeholder="otomatis-dari-nama"
+                 value="{{ form.slug.value|default_if_none:'' }}"{% if form.slug.errors %} class="input-error"{% endif %}>
+          {% if form.slug.errors %}<span class="field-error">{{ form.slug.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="id_price_per_day">Harga Sewa / Hari (Rp) *</label>
+          <input type="number" id="id_price_per_day" name="price_per_day" min="1" max="100000000" required placeholder="25000"
+                 value="{{ form.price_per_day.value|default_if_none:'' }}"{% if form.price_per_day.errors %} class="input-error"{% endif %}>
+          {% if form.price_per_day.errors %}<span class="field-error">{{ form.price_per_day.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="id_price_type">Tipe Harga</label>
+          <select id="id_price_type" name="price_type">
+            {% for val, label in form.fields.price_type.choices %}
+              <option value="{{ val }}" {% if form.price_type.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="id_total_stock">Total Unit Dimiliki Toko *</label>
+          <input type="number" id="id_total_stock" name="total_stock" min="0" max="10000" required
+                 value="{{ form.total_stock.value|default_if_none:'1' }}"{% if form.total_stock.errors %} class="input-error"{% endif %}>
+          {% if form.total_stock.errors %}<span class="field-error">{{ form.total_stock.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="id_available_stock">Stok Siap Sewa Saat Ini *</label>
+          <input type="number" id="id_available_stock" name="available_stock" min="0" max="10000" required
+                 value="{{ form.available_stock.value|default_if_none:'1' }}"{% if form.available_stock.errors %} class="input-error"{% endif %}>
+          {% if form.available_stock.errors %}<span class="field-error">{{ form.available_stock.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <label for="id_condition">Kondisi Fisik</label>
+          <select id="id_condition" name="condition">
+            {% for val, label in form.fields.condition.choices %}
+              <option value="{{ val }}" {% if form.condition.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="id_image">Unggah Foto Produk Baru (JPG/PNG/WEBP)</label>
+          <input type="file" id="id_image" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+          {% if is_edit and product.get_image_url %}
+            <small style="color:var(--neutral-500)">Gambar aktif saat ini: <code>{{ product.get_image_url }}</code></small>
+          {% endif %}
+          {% if form.image.errors %}<span class="field-error">{{ form.image.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row full">
+          <label for="id_image_filename">Atau Nama File Gambar Statis <small style="font-weight:500;color:#777">(opsional, di folder static/assets/img/product/)</small></label>
+          <input type="text" id="id_image_filename" name="image_filename" maxlength="255" placeholder="Contoh: products_xxx.jpg"
+                 value="{{ form.image_filename.value|default_if_none:'' }}"{% if form.image_filename.errors %} class="input-error"{% endif %}>
+          {% if form.image_filename.errors %}<span class="field-error">{{ form.image.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row full">
+          <label for="id_description">Deskripsi &amp; Spesifikasi</label>
+          <textarea id="id_description" name="description" rows="4" placeholder="Rincian kapasitas, bahan, dan kelengkapan alat...">{{ form.description.value|default_if_none:'' }}</textarea>
+        </div>
+
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <input type="checkbox" name="is_featured" value="1" style="width:18px;height:18px" {% if form.is_featured.value %}checked{% endif %}>
+            <span>Tampilkan di Produk Unggulan Beranda</span>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <input type="checkbox" name="is_active" value="1" style="width:18px;height:18px" {% if form.is_active.value %}checked{% endif %}>
+            <span>Status Aktif (Dapat Disewa Pelanggan)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button type="submit" class="btn-save">{% if is_edit %}Simpan Perubahan{% else %}Simpan Barang Baru{% endif %}</button>
+        <a href="{% url 'accounts:admin_products' %}" class="btn-ghost">Batal</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if is_edit %}
+<div class="panel" style="margin-top:24px">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">10 Riwayat Mutasi Stok Terakhir</div>
+      <div class="panel-sub">Jejak audit perubahan stok untuk {{ product.name }}</div>
+    </div>
+    <a href="{% url 'accounts:admin_inventory_logs' %}?q={{ product.name|urlencode }}" class="panel-link">Semua log barang ini</a>
+  </div>
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Aksi</th>
+            <th>Perubahan</th>
+            <th>Sebelum &rarr; Sesudah</th>
+            <th>Oleh</th>
+            <th>Catatan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in recent_logs %}
+          <tr>
+            <td class="adm-nowrap">{{ log.created_at|date:"d M Y H:i" }}</td>
+            <td><span class="badge {% if log.quantity_change > 0 %}active{% elif log.quantity_change < 0 %}pending{% else %}returned{% endif %}">{{ log.get_action_display }}</span></td>
+            <td class="mono">{% if log.quantity_change > 0 %}+{% endif %}{{ log.quantity_change }}</td>
+            <td class="mono">{{ log.stock_before }} &rarr; {{ log.stock_after }}</td>
+            <td>{% if log.changed_by %}@{{ log.changed_by.username }}{% else %}Sistem{% endif %}</td>
+            <td class="adm-muted">{{ log.notes|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">Belum ada riwayat perubahan stok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

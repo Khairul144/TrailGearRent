@@ -3,9 +3,13 @@
 
 {% block title %}Laporan — Admin TrailGear{% endblock %}
 {% block page_title %}Laporan{% endblock %}
-{% block page_sub %}Ringkasan pendapatan dan performa penyewaan.{% endblock %}
+{% block page_sub %}Ringkasan pendapatan sewa, denda pengembalian, dan performa penyewaan berdasarkan periode.{% endblock %}
 
 {% block page_actions %}
+  <a href="?{% if querystring %}{{ querystring }}&{% endif %}export=csv" class="btn-xs primary">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export CSV
+  </a>
   <button type="button" class="btn-xs" onclick="window.print()">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
     Cetak
@@ -14,9 +18,41 @@
 
 {% block admin_content %}
 
+<div class="panel" style="margin-top:0; margin-bottom:20px">
+  <form class="adm-filters" method="get" action="{% url 'accounts:admin_reports' %}" style="border-bottom:0">
+    <div class="adm-field">
+      <label for="fperiod">Periode Laporan</label>
+      <select id="fperiod" name="period" onchange="document.getElementById('customDates').hidden = (this.value !== 'custom');">
+        <option value="all" {% if period == 'all' %}selected{% endif %}>Semua Waktu</option>
+        <option value="today" {% if period == 'today' %}selected{% endif %}>Hari Ini</option>
+        <option value="7d" {% if period == '7d' %}selected{% endif %}>7 Hari Terakhir</option>
+        <option value="30d" {% if period == '30d' %}selected{% endif %}>30 Hari Terakhir</option>
+        <option value="month" {% if period == 'month' %}selected{% endif %}>Bulan Ini</option>
+        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Rentang Tanggal Kustom</option>
+      </select>
+    </div>
+    <div id="customDates" style="display:flex;gap:10px;flex-wrap:wrap"{% if period != 'custom' %} hidden{% endif %}>
+      <div class="adm-field">
+        <label for="fstart">Dari Tanggal</label>
+        <input type="date" id="fstart" name="start" value="{{ start_val }}">
+      </div>
+      <div class="adm-field">
+        <label for="fend">Sampai Tanggal</label>
+        <input type="date" id="fend" name="end" value="{{ end_val }}">
+      </div>
+    </div>
+    <button type="submit" class="btn-xs primary">Terapkan</button>
+    {% if period != 'all' %}
+      <a href="{% url 'accounts:admin_reports' %}" class="adm-reset">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
 <div class="adm-mini-grid" style="margin-bottom:20px">
-  <div class="adm-mini"><div class="k">Pendapatan Sewa</div><div class="v small">{{ revenue_fmt }}</div></div>
-  <div class="adm-mini"><div class="k">Jaminan Sewa</div><div class="v small">KTP Asli Fisik</div></div>
+  <div class="adm-mini"><div class="k">Total Pemasukan Bersih</div><div class="v small" style="color:#1b5e20">{{ revenue_fmt }}</div></div>
+  <div class="adm-mini"><div class="k">Sewa Lunas</div><div class="v small">{{ rental_revenue_fmt }}</div></div>
+  <div class="adm-mini"><div class="k">Denda Lunas</div><div class="v small">{{ fine_paid_fmt }}</div></div>
+  <div class="adm-mini"><div class="k">Piutang Denda</div><div class="v small" style="color:#8a6100">{{ fine_unpaid_fmt }}</div></div>
   <div class="adm-mini"><div class="k">Total Pesanan</div><div class="v">{{ order_count }}</div></div>
   <div class="adm-mini"><div class="k">Barang Aktif</div><div class="v">{{ total_products }}</div></div>
 </div>
@@ -27,7 +63,7 @@
     <div class="panel-head">
       <div>
         <div class="panel-title">Pesanan per Status</div>
-        <div class="panel-sub">Jumlah &amp; nilai transaksi</div>
+        <div class="panel-sub">Distribusi status pada periode terpilih</div>
       </div>
     </div>
     <div class="adm-bars">
@@ -35,17 +71,17 @@
       <div class="adm-bar-row">
         <span>{{ row.label }}</span>
         <div class="adm-bar-track">
-          <div class="adm-bar-fill {% if row.kode == 'MENUNGGU_PEMBAYARAN' %}pending{% elif row.kode == 'DIAMBIL' %}active{% elif row.kode == 'KEMBALI' %}returned{% elif row.kode == 'DIBATALKAN' %}cancelled{% endif %}"
+          <div class="adm-bar-fill {% if row.kode == 'MENUNGGU_PEMBAYARAN' %}pending{% elif row.kode == 'DIKONFIRMASI' %}paid{% elif row.kode == 'DIAMBIL' %}active{% elif row.kode == 'KEMBALI' %}returned{% elif row.kode == 'DIBATALKAN' %}cancelled{% endif %}"
                style="width:{% widthratio row.jumlah order_count 100 %}%;min-width:4px"></div>
         </div>
         <span class="num">{{ row.jumlah }}</span>
       </div>
       {% empty %}
-        <div class="adm-muted">Belum ada data pesanan.</div>
+        <div class="adm-muted">Belum ada data pesanan pada periode ini.</div>
       {% endfor %}
     </div>
     <div class="panel-foot">
-      <span>Nilai transaksi mengikuti grand total masing-masing pesanan.</span>
+      <span>Pemasukan bersih menghitung pesanan lunas (Dikonfirmasi/Berjalan/Selesai) + denda lunas.</span>
     </div>
   </div>
 
@@ -53,7 +89,7 @@
     <div class="panel-head">
       <div>
         <div class="panel-title">Produk Terlaris</div>
-        <div class="panel-sub">Berdasarkan unit disewa</div>
+        <div class="panel-sub">Berdasarkan unit disewa (pesanan lunas)</div>
       </div>
     </div>
     <div class="panel-body">
@@ -70,7 +106,7 @@
               <td class="mono">{{ p.nilai_fmt }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="3">Belum ada penyewaan selesai.</td></tr>
+            <tr><td colspan="3">Belum ada penyewaan terkonfirmasi pada periode ini.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -84,7 +120,7 @@
   <div class="panel-head">
     <div>
       <div class="panel-title">Rincian Nilai per Status</div>
-      <div class="panel-sub">Grand total pesanan yang tercatat</div>
+      <div class="panel-sub">Grand total biaya sewa pesanan yang tercatat</div>
     </div>
   </div>
   <div class="panel-body">
@@ -101,7 +137,7 @@
             <td class="mono">{{ row.nilai_fmt }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="3">Belum ada data.</td></tr>
+          <tr><td colspan="3">Belum ada data pada periode ini.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -42,7 +42,7 @@
             <th>Role</th>
             <th>Email</th>
             <th>Status</th>
-            <th>Pesanan Selesai</th>
+            <th>Aksi Diproses</th>
             <th>Login Terakhir</th>
             <th>Aksi</th>
           </tr>
@@ -62,7 +62,10 @@
             <td><span class="badge role{% if s.role_name == 'Admin' %} role-admin{% endif %}">{{ s.role_name }}</span></td>
             <td>{{ s.email|default:"—" }}</td>
             <td>{% if s.is_active %}<span class="badge active">Aktif</span>{% else %}<span class="badge rejected">Nonaktif</span>{% endif %}</td>
-            <td class="mono">{{ s.order_count }}</td>
+            <td>
+              <span class="mono">{{ s.order_count }}</span>
+              <br><small>{{ s.approved_count }} verifikasi &bull; {{ s.returned_count }} retur</small>
+            </td>
             <td class="adm-nowrap">{{ s.last_login|date:"d M Y H:i"|default:"—" }}</td>
             <td><a class="btn-xs" href="{% url 'accounts:admin_user_manage' s.pk %}">Kelola</a></td>
           </tr>

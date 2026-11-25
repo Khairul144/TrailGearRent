@@ -6,7 +6,12 @@
 {% block page_sub %}Audit log peristiwa keamanan, kontrol buka blokir IP/akun, status audit DBMS, dan laporan User Access Review (UAR).{% endblock %}
 
 {% block page_actions %}
-  <form method="post" action="{% url 'accounts:admin_reset_ratelimit' %}" style="margin:0">
+  <a href="?{% if querystring %}{{ querystring }}&{% endif %}export=csv" class="btn-xs">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export CSV Log
+  </a>
+  <form method="post" action="{% url 'accounts:admin_reset_ratelimit' %}" style="margin:0"
+        onsubmit="return confirm('Reset seluruh cache rate limit (registrasi & login) untuk semua IP?');">
     {% csrf_token %}
     <input type="hidden" name="mode" value="all">
     <button type="submit" class="btn-xs primary">
@@ -129,6 +134,19 @@
   </div>
 
   <form class="adm-filters" method="get" action="{% url 'accounts:admin_security' %}">
+    <div class="adm-field grow">
+      <label for="fq">Cari</label>
+      <input type="text" id="fq" name="q" value="{{ query }}" placeholder="IP address, username, kode order, atau keterangan">
+    </div>
+    <div class="adm-field">
+      <label for="fperiod">Periode</label>
+      <select id="fperiod" name="period">
+        <option value="">Semua waktu</option>
+        <option value="24h" {% if period_filter == '24h' %}selected{% endif %}>24 Jam Terakhir</option>
+        <option value="7d" {% if period_filter == '7d' %}selected{% endif %}>7 Hari Terakhir</option>
+        <option value="30d" {% if period_filter == '30d' %}selected{% endif %}>30 Hari Terakhir</option>
+      </select>
+    </div>
     <div class="adm-field">
       <label for="fstatus">Status</label>
       <select id="fstatus" name="status">
@@ -148,7 +166,7 @@
       </select>
     </div>
     <button type="submit" class="btn-xs primary">Terapkan</button>
-    {% if status_filter or type_filter %}
+    {% if status_filter or type_filter or period_filter or query %}
       <a href="{% url 'accounts:admin_security' %}" class="adm-reset">Reset</a>
     {% endif %}
   </form>
@@ -185,7 +203,7 @@
               {% else %}—{% endif %}
             </td>
             <td class="mono">{{ e.ip_address|default:"—" }}</td>
-            <td class="adm-muted">{{ e.description|default:"—"|truncatechars:80 }}</td>
+            <td class="adm-muted" title="{{ e.description }}">{{ e.description|default:"—"|truncatechars:80 }}</td>
             <td>
               {% if e.ip_address %}
               <form method="post" action="{% url 'accounts:admin_reset_ratelimit' %}" style="margin:0">

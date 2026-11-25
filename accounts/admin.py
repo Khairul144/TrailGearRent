@@ -52,18 +52,21 @@ class UserAdmin(BaseUserAdmin):
     ordering = ("-date_joined",)
 
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Data TrailGear", {"fields": ("phone_number",)}),
+        ("Data TrailGear", {"fields": ("phone_number", "address")}),
         (
             "Keamanan (account lockout)",
             {
                 "fields": ("failed_login_attempts", "locked_until"),
-                "description": "Dikelola otomatis oleh proses login. Ubah hanya bila perlu membuka kunci manual.",
+                "description": (
+                    "Dikelola otomatis oleh proses login (read-only). "
+                    "Untuk membuka kunci akun, gunakan Dashboard Admin -> Kelola Akun atau Keamanan."
+                ),
             },
         ),
     )
     readonly_fields = ("failed_login_attempts", "locked_until")
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ("Data TrailGear", {"fields": ("email", "first_name", "last_name", "phone_number")}),
+        ("Data TrailGear", {"fields": ("email", "first_name", "last_name", "phone_number", "address")}),
     )
 
 

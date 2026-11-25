@@ -14,7 +14,7 @@
     </thead>
     <tbody>
       {% for order in open_orders %}
-      <tr data-status="{{ order.status }}">
+      <tr data-status="{{ order.status }}" data-search="{{ order.order_code|lower }} {{ order.full_name|lower }} {{ order.phone_number|lower }} {{ order.items_summary|lower }}">
         <td class="mono">
           <a href="{% url 'rentals:order_detail' order.order_code %}">{{ order.order_code }}</a>
           <br><small>{{ order.created_at|date:"d M Y, H:i" }}</small>
@@ -60,6 +60,15 @@
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
               <button type="submit" class="rt-action confirm">Konfirmasi Pesanan</button>
             </form>
+            {% if order.has_payment_proof %}
+            <form method="post" action="{% url 'rentals:staff_reject_proof' order.order_code %}"
+                  onsubmit="var r = prompt('Alasan penolakan bukti pembayaran untuk {{ order.order_code }}:', 'Bukti transfer kurang jelas / nominal belum sesuai'); if (r === null) return false; this.querySelector('[name=reason]').value = r; return true;">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <input type="hidden" name="reason" value="">
+              <button type="submit" class="rt-action cancel" title="Hapus struk tidak valid agar pelanggan unggah ulang">Tolak Struk</button>
+            </form>
+            {% endif %}
             {% endif %}
             {% if order.can_pickup %}
             <form method="post" action="{% url 'rentals:staff_order_action' order.order_code 'pickup' %}">

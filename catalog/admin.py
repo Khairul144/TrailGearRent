@@ -66,6 +66,57 @@ class ProductAdmin(_AdminRolePermissionMixin, admin.ModelAdmin):
     list_select_related = ("category",)
     ordering = ("category__order", "name")
 
+    def save_model(self, request, obj, form, change):
+        from accounts.models import SecurityEvent
+        from accounts.security import log_event
+
+        old_available = 0
+        if change and obj.pk:
+            old_available = (
+                Product.objects.filter(pk=obj.pk)
+                .values_list("available_stock", flat=True)
+                .first()
+                or 0
+            )
+        super().save_model(request, obj, form, change)
+        actor = request.user if getattr(request.user, "is_authenticated", False) else None
+        if not change:
+            if obj.available_stock > 0:
+                InventoryLog.objects.create(
+                    product=obj,
+                    changed_by=actor,
+                    action=InventoryLog.Action.RESTOCK,
+                    quantity_change=obj.available_stock,
+                    stock_before=0,
+                    stock_after=obj.available_stock,
+                    notes="Produk baru ditambahkan via Django Admin",
+                )
+            log_event(
+                request,
+                SecurityEvent.ADMIN_CATALOG_UPDATED,
+                SecurityEvent.STATUS_SUCCESS,
+                user=actor,
+                description=f"action=django_admin_add_product product_id={obj.pk} stock={obj.available_stock}/{obj.total_stock}",
+            )
+        elif obj.available_stock != old_available:
+            delta = obj.available_stock - old_available
+            InventoryLog.objects.create(
+                product=obj,
+                changed_by=actor,
+                action=InventoryLog.Action.RESTOCK if delta > 0 else InventoryLog.Action.ADJUSTMENT,
+                quantity_change=delta,
+                stock_before=old_available,
+                stock_after=obj.available_stock,
+                notes="Perubahan stok via Django Admin",
+            )
+            log_event(
+                request,
+                SecurityEvent.ADMIN_CATALOG_UPDATED,
+                SecurityEvent.STATUS_SUCCESS,
+                user=actor,
+                description=f"action=django_admin_stock_change product_id={obj.pk} stock={old_available}->{obj.available_stock}",
+            )
+
 
 @admin.register(InventoryLog)
 class InventoryLogAdmin(_AdminRolePermissionMixin, admin.ModelAdmin):

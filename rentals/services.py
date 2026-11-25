@@ -671,3 +671,63 @@ def cancel_order_by_customer(order: RentalOrder, actor) -> RentalOrder:
         order.status = RentalOrder.Status.DIBATALKAN
         order.save(update_fields=["status", "stock_deducted", "updated_at"])
     return order
+
+
+def reject_payment_proof(order: RentalOrder, actor, reason: str = "") -> RentalOrder:
+    """Tolak berkas bukti pembayaran agar pelanggan dapat mengunggah ulang tanpa membatalkan booking.
+
+    Keamanan:
+    - Wajib melewati aturan Maker-Checker (pembuat pesanan tidak boleh memverifikasi/menolak sendiri).
+    - Hanya diizinkan ketika pesanan berstatus MENUNGGU_PEMBAYARAN dan memiliki berkas bukti.
+    - Dikunci secara atomik (`select_for_update`).
+    """
+    clean_reason = (reason or "").replace("\r", " ").replace("\n", " ").strip()[:200]
+
+    with transaction.atomic():
+        order = RentalOrder.objects.select_for_update().get(pk=order.pk)
+        if (
+            actor is not None
+            and getattr(actor, "is_authenticated", False)
+            and order.user_id is not None
+            and order.user_id == actor.pk
+        ):
+            raise MakerCheckerViolationError(
+                "Pelanggaran Maker-Checker: Pembuat pesanan (Maker) tidak diizinkan "
+                "memverifikasi atau menolak bukti pembayarannya sendiri."
+            )
+        if order.status != RentalOrder.Status.MENUNGGU_PEMBAYARAN:
+            raise OrderTransitionError(
+                "Bukti pembayaran hanya dapat ditolak saat status masih Menunggu Pembayaran."
+            )
+        if not order.has_payment_proof():
+            raise OrderTransitionError(
+                "Pesanan ini belum memiliki berkas bukti pembayaran."
+            )
+
+        try:
+            order.payment_proof.delete(save=False)
+        except Exception:
+            pass
+
+        order.payment_proof = ""
+        order.payment_proof_uploaded_at = None
+        if clean_reason:
+            prefix = f"[Bukti ditolak: {clean_reason}]"
+            order.return_notes = prefix
+            order.save(
+                update_fields=[
+                    "payment_proof",
+                    "payment_proof_uploaded_at",
+                    "return_notes",
+                    "updated_at",
+                ]
+            )
+        else:
+            order.save(
+                update_fields=[
+                    "payment_proof",
+                    "payment_proof_uploaded_at",
+                    "updated_at",
+                ]
+            )
+    return order

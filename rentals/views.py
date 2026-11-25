@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import SecurityEvent
 from accounts.permissions import role_required
-from accounts.roles import ROLE_ADMIN, ROLE_CASHIER
+from accounts.roles import ROLE_ADMIN, ROLE_CASHIER, has_role
 from accounts.security import log_event
 from catalog.models import Product
 
@@ -839,6 +839,53 @@ def settle_fine(request, order_code):
             reverse("rentals:order_detail", kwargs={"order_code": order.order_code}),
         )
     )
+
+
+@role_required(ROLE_CASHIER, ROLE_ADMIN)
+@require_POST
+def staff_reject_proof(request, order_code):
+    """Tolak berkas bukti pembayaran agar pelanggan mengunggah ulang struk yang valid."""
+    order = get_object_or_404(RentalOrder, order_code=order_code)
+    reason = (request.POST.get("reason") or "").replace("\r", " ").replace("\n", " ").strip()[:160]
+    try:
+        order = services.reject_payment_proof(order, request.user, reason=reason)
+    except MakerCheckerViolationError as exc:
+        log_event(
+            request,
+            SecurityEvent.MAKER_CHECKER_VIOLATION,
+            SecurityEvent.STATUS_BLOCKED,
+            user=request.user,
+            description=(
+                f"order={order.order_code} maker={order.user_id} "
+                f"checker={request.user.pk} action=reject_proof"
+            ),
+        )
+        messages.error(request, str(exc))
+    except OrderTransitionError as exc:
+        messages.error(request, str(exc))
+    else:
+        log_event(
+            request,
+            SecurityEvent.PAYMENT_PROOF_REJECTED,
+            SecurityEvent.STATUS_SUCCESS,
+            user=request.user,
+            description=(
+                f"order={order.order_code} rejected_by={request.user.pk}"
+                + (f" reason={reason!r}" if reason else "")
+            ),
+        )
+        messages.success(
+            request,
+            f"Bukti pembayaran untuk pesanan {order.order_code} telah ditolak. "
+            "Pelanggan dapat mengunggah ulang bukti baru.",
+        )
+
+    default_back = (
+        reverse("accounts:admin_payments")
+        if has_role(request.user, ROLE_ADMIN)
+        else reverse("rentals:staff_order_list")
+    )
+    return redirect(_safe_next(request, default_back))
 
 
 def staff_stats() -> dict:

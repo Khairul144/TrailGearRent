@@ -1,0 +1,112 @@
+{% extends "accounts/admin/_base.html" %}
+{% load static %}
+
+{% block title %}Atur Stok {{ product.name }} — Admin TrailGear{% endblock %}
+{% block page_title %}Penyesuaian Stok Barang{% endblock %}
+{% block page_sub %}{{ product.name }} ({{ product.category.name }}) — Setiap mutasi wajib disertai alasan audit.{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'accounts:admin_products' %}" class="btn-xs">&larr; Daftar Barang</a>
+  <a href="{% url 'accounts:admin_product_edit' product.pk %}" class="btn-xs">Edit Detail Barang</a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="adm-mini-grid" style="margin-bottom:20px">
+  <div class="adm-mini"><div class="k">Stok Tersedia</div><div class="v">{{ product.available_stock }}</div></div>
+  <div class="adm-mini"><div class="k">Total Unit Toko</div><div class="v">{{ product.total_stock }}</div></div>
+  <div class="adm-mini"><div class="k">Harga / Hari</div><div class="v small">{{ product.formatted_price }}</div></div>
+  <div class="adm-mini">
+    <div class="k">Status Katalog</div>
+    <div class="v small">
+      {% if not product.is_active %}<span class="badge cancelled">Nonaktif</span>
+      {% elif product.available_stock == 0 %}<span class="badge rejected">Stok Habis</span>
+      {% else %}<span class="badge active">Tersedia</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:0">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Form Mutasi / Penyesuaian Stok</div>
+      <div class="panel-sub">Operasi dikunci secara atomik (anti-race condition) dan tercatat di <code>InventoryLog</code> serta <code>SecurityEvent</code>.</div>
+    </div>
+  </div>
+  <div class="panel-body pad">
+    <form method="post" action="{% url 'accounts:admin_product_stock' product.pk %}" novalidate>
+      {% csrf_token %}
+      <div class="settings-grid">
+        <div class="form-row">
+          <label for="id_action">Jenis Penyesuaian *</label>
+          <select id="id_action" name="action">
+            {% for val, label in form.fields.action.choices %}
+              <option value="{{ val }}" {% if form.action.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="id_quantity">Jumlah Unit *</label>
+          <input type="number" id="id_quantity" name="quantity" min="0" max="10000" required placeholder="Contoh: 2"
+                 value="{{ form.quantity.value|default_if_none:'1' }}"{% if form.quantity.errors %} class="input-error"{% endif %}>
+          {% if form.quantity.errors %}<span class="field-error">{{ form.quantity.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="form-row full">
+          <label for="id_notes">Catatan / Alasan Audit *</label>
+          <input type="text" id="id_notes" name="notes" maxlength="255" required
+                 placeholder="Contoh: Pembelian 3 tenda baru batch Nov 2026 / 1 unit frame patah masuk servis"
+                 value="{{ form.notes.value|default_if_none:'' }}"{% if form.notes.errors %} class="input-error"{% endif %}>
+          {% if form.notes.errors %}<span class="field-error">{{ form.notes.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button type="submit" class="btn-save">Terapkan Perubahan Stok</button>
+        <a href="{% url 'accounts:admin_products' %}" class="btn-ghost">Batal</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:24px">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Riwayat Mutasi Stok Barang Ini</div>
+      <div class="panel-sub">15 catatan terakhir</div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Jenis Aksi</th>
+            <th>Perubahan</th>
+            <th>Stok Sebelum &rarr; Sesudah</th>
+            <th>Diubah Oleh</th>
+            <th>Catatan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="adm-nowrap">{{ log.created_at|date:"d M Y H:i" }}</td>
+            <td><span class="badge {% if log.quantity_change > 0 %}active{% elif log.quantity_change < 0 %}pending{% else %}returned{% endif %}">{{ log.get_action_display }}</span></td>
+            <td class="mono">{% if log.quantity_change > 0 %}+{% endif %}{{ log.quantity_change }}</td>
+            <td class="mono">{{ log.stock_before }} &rarr; {{ log.stock_after }}</td>
+            <td>{% if log.changed_by %}@{{ log.changed_by.username }}{% else %}Sistem{% endif %}</td>
+            <td class="adm-muted">{{ log.notes|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">Belum ada catatan log inventaris.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
