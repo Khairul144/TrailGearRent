@@ -1586,6 +1586,50 @@ class AdminUserManageAndRateLimitResetTests(TestCase):
         )
         self.assertRedirects(res, reverse("accounts:admin_security"))
         self.assertFalse(ratelimit.register_blocked("127.0.0.1"))
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.admin,
+                event_type=SecurityEvent.ADMIN_SECURITY_OVERRIDE,
+                status=SecurityEvent.STATUS_SUCCESS,
+                description__contains="reset_ratelimit_ip",
+            ).exists()
+        )
+
+    def test_admin_user_role_change_and_toggle_are_logged(self):
+        self.client.force_login(self.admin)
+        manage_url = reverse("accounts:admin_user_manage", args=[self.customer.pk])
+        self.client.post(
+            manage_url,
+            {
+                "action": "profile_role",
+                "email": self.customer.email,
+                "first_name": "Audit",
+                "last_name": "Target",
+                "phone_number": "081234567890",
+                "address": "Jl. Audit 8",
+                "role": "Cashier",
+                "is_active": "1",
+            },
+        )
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.admin,
+                event_type=SecurityEvent.ADMIN_USER_UPDATED,
+                status=SecurityEvent.STATUS_SUCCESS,
+                description__contains="role=Customer->Cashier",
+            ).exists()
+        )
+
+        self.client.post(reverse("accounts:admin_user_toggle", args=[self.customer.pk]))
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                user=self.admin,
+                event_type=SecurityEvent.ADMIN_USER_UPDATED,
+                status=SecurityEvent.STATUS_SUCCESS,
+                description__contains="action=toggle_active",
+            ).exists()
+        )
+
 
 
 

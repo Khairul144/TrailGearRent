@@ -1,0 +1,34 @@
+=== F1: SELECT & INSERT NORMAL ===
+CREATE TABLE IF NOT EXISTS uji_audit_tmp (id SERIAL PRIMARY KEY, nama TEXT, nominal INT, created_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE
+        INSERT INTO uji_audit_tmp (nama, nominal) VALUES ('Andi Uji Modul 8', 100000);
+INSERT 0 1
+        SELECT id, nama, nominal FROM uji_audit_tmp;
+ id |       nama       | nominal 
+----+------------------+---------
+  1 | Andi Uji Modul 8 |  100000
+(1 row)
+
+        SELECT id, name, available_stock FROM catalog_product ORDER BY id LIMIT 3;
+ id |                  name                  | available_stock 
+----+----------------------------------------+-----------------
+  1 | Dry Sack Waterproof                    |              12
+  2 | Sarung Tangan Kilimanjaro Warna Random |              11
+  3 | Kacamata Hitam                         |              10
+(3 rows)
+
+=== F2a: DROP TABLE DUMMY (uji_audit_tmp) ===
+DROP TABLE uji_audit_tmp;
+DROP TABLE
+
+=== F2b: PERCOBAAN DELETE AUDIT LOG OLEH role_kasir_db ===
+SET ROLE role_kasir_db;
+SET
+DELETE FROM accounts_securityevent;
+ERROR:  permission denied for table accounts_securityevent
+RESET ROLE;
+RESET
+
+=== F3: LOGIN GAGAL LANGSUNG KE POSTGRESQL (normal_user) ===
+psql: error: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "normal_user"
+connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "normal_user"

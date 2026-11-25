@@ -1,0 +1,27 @@
+=== KORELASI SERANGAN BERANTAI (IP=198.51.100.77, Stage 1 -> Stage 6) ===
+Stage 6b Session Replay HTTP Status: 302 -> /login/?next=/settings/
+
+SELECT
+            to_char(e.timestamp AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD HH24:MI:SS.MS') AS waktu_wib,
+            e.ip_address,
+            COALESCE(u.username, 'anonymous') AS actor,
+            e.event_type,
+            e.status,
+            e.description
+        FROM accounts_securityevent e
+        LEFT JOIN accounts_user u ON u.id = e.user_id
+        WHERE e.ip_address = '198.51.100.77'
+        ORDER BY e.timestamp ASC;
+        waktu_wib        |  ip_address   |    actor    |  event_type   | status  |                                    description                                     
+-------------------------+---------------+-------------+---------------+---------+------------------------------------------------------------------------------------
+ 2026-11-26 00:41:28.765 | 198.51.100.77 | anonymous   | LOGIN_FAILED  | FAILURE | identifier='m8_attacker'
+ 2026-11-26 00:41:34.634 | 198.51.100.77 | anonymous   | LOGIN_FAILED  | FAILURE | identifier='m8_attacker'
+ 2026-11-26 00:41:40.590 | 198.51.100.77 | anonymous   | LOGIN_FAILED  | FAILURE | identifier='m8_attacker'
+ 2026-11-26 00:41:43.182 | 198.51.100.77 | m8_attacker | LOGIN_SUCCESS | SUCCESS | user_id=6
+ 2026-11-26 00:41:43.209 | 198.51.100.77 | m8_attacker | ACCESS_DENIED | BLOCKED | path=/dashboard/cashier/ role=Customer butuh=Cashier,Admin
+ 2026-11-26 00:41:43.228 | 198.51.100.77 | m8_attacker | ACCESS_DENIED | BLOCKED | path=/dashboard/admin/security/ role=Customer butuh=Admin
+ 2026-11-26 00:41:43.269 | 198.51.100.77 | m8_attacker | ACCESS_DENIED | BLOCKED | order_detail ditolak order=TG-20261126-UT2Z
+ 2026-11-26 00:41:43.282 | 198.51.100.77 | m8_attacker | ACCESS_DENIED | BLOCKED | customer_cancel IDOR order=TG-20261126-UT2Z
+ 2026-11-26 00:41:43.301 | 198.51.100.77 | m8_attacker | ACCESS_DENIED | BLOCKED | path=/dashboard/orders/TG-20261126-UT2Z/confirm/ role=Customer butuh=Cashier,Admin
+ 2026-11-26 00:41:43.352 | 198.51.100.77 | m8_attacker | LOGOUT        | SUCCESS | user_id=6
+(10 rows)

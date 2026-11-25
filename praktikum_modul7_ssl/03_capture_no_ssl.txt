@@ -1,0 +1,9 @@
+[08:57:51.610] CLIENT->PG (93 bytes): ...]....user.normal_user.database.TrailGear_auth.application_name.psql.client_encoding.UTF8..
+[08:57:51.738] PG->CLIENT (24 bytes): R........SCRAM-SHA-256..
+[08:57:51.741] CLIENT->PG (55 bytes): p...6SCRAM-SHA-256.... n,,n=,r=tU4PQIponjyDhCC3jXrXq8Ji
+[08:57:51.741] PG->CLIENT (93 bytes): R...\....r=tU4PQIponjyDhCC3jXrXq8Ji3pw1fBCzCMxlqUjs8Zc6lQwr,s=T318RwnoHD/6nHomXWweKg==,i=4096
+[08:57:51.751] CLIENT->PG (109 bytes): p...lc=biws,r=tU4PQIponjyDhCC3jXrXq8Ji3pw1fBCzCMxlqUjs8Zc6lQwr,p=oJyW07c8S6MfBRO2mUwZK54ZUKzpzQavmnm7XBISDbw=
+[08:57:51.753] PG->CLIENT (512 bytes): R...6....v=ePA1L1LP/6sFlAoJtSo2VQx4ZHOJrFhxG4ffAnvE9Lg=R........S....in_hot_standby.off.S....integer_datetimes.on.S....TimeZone.Asia/Bangkok.S....IntervalStyle.postgres.S... search_path."$user", public.S....is_superuser.off.S....application_name.psql.S...&default_transaction_read_only.off.S....scram_iterations.4096.S....DateStyle.ISO, MDY.S...#standard_conforming_strings.on.S...&session_authorization.normal_user.S....client_encoding.UTF8.S....server_version.18.6.S....server_encoding.UTF8.K......o`W..xZ....I
+[08:57:51.754] CLIENT->PG (15 bytes): Q....SELECT 1;.
+[08:57:51.755] PG->CLIENT (66 bytes): T...!..?column?...................D..........1C....SELECT 1.Z....I
+[08:57:51.755] CLIENT->PG (5 bytes): X....

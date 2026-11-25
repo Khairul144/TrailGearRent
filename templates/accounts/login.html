@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=3">
-  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=3">
-  <link rel="stylesheet" href="{% static 'css/account.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}?v=4">
 </head>
 <body id="top">
 
@@ -100,49 +100,52 @@
   </header>
 
   <!-- ===== LOGIN ===== -->
-  <main class="auth-main">
-    <div class="auth-card">
-      <span class="auth-pill">Masuk</span>
-      <h1 class="auth-title">Selamat datang</h1>
+  <main class="auth-main auth-main--clean">
+    <section class="auth-card auth-card--login">
+      <div class="auth-form-head auth-form-head--center auth-form-head--login">
+        <span class="auth-pill">Masuk</span>
+        <h1 class="auth-heading">Selamat datang kembali</h1>
+        <p class="auth-subtitle">Gunakan username atau email terdaftar untuk masuk.</p>
+      </div>
 
       {% if error %}<div class="auth-msg show error" id="authMsg">{{ error }}</div>{% elif messages %}{% for m in messages %}<div class="auth-msg show {{ m.tags }}" id="authMsg">{{ m }}</div>{% endfor %}{% else %}<div class="auth-msg" id="authMsg"></div>{% endif %}
 
       <form id="loginForm" method="post" action="{% url 'accounts:login' %}" novalidate>
-        {% csrf_token %}
-        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-        <div class="form-group">
-          <div class="auth-input">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </span>
-            <input type="text" id="loginUser" name="username" placeholder="Email/Username" maxlength="150" autocomplete="username" value="{{ form.username.value|default_if_none:'' }}" required autofocus{% if form.username.errors %} class="input-error"{% endif %}>
+          {% csrf_token %}
+          {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+          <div class="form-group">
+            <label class="auth-label" for="loginUser">Email atau Username</label>
+            <div class="auth-input">
+              <span class="input-icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </span>
+              <input type="text" id="loginUser" name="username" placeholder="Masukkan email atau username" maxlength="150" autocomplete="username" value="{{ form.username.value|default_if_none:'' }}" required autofocus{% if form.username.errors %} class="input-error"{% endif %}>
+            </div>
           </div>
-        </div>
-        <div class="form-group">
-          <div class="auth-input has-pass-toggle">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </span>
-            <input type="password" id="loginPass" name="password" placeholder="Password" maxlength="128" autocomplete="current-password" required{% if form.password.errors %} class="input-error"{% endif %}>
-            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password" aria-pressed="false" title="Tampilkan password">
-              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
-              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <div class="form-group">
+            <label class="auth-label" for="loginPass">Password</label>
+            <div class="auth-input has-pass-toggle">
+              <span class="input-icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </span>
+              <input type="password" id="loginPass" name="password" placeholder="Masukkan password" maxlength="128" autocomplete="current-password" required{% if form.password.errors %} class="input-error"{% endif %}>
+              <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password" aria-pressed="false" title="Tampilkan password">
+                <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="auth-login-meta">
+            <span class="auth-login-hint">Lupa password? Hubungi admin toko.</span>
+          </div>
+          <div class="auth-submit-row">
+            <button type="submit" class="btn-auth" id="loginBtn">Masuk
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
           </div>
-        </div>
-        <div class="form-group">
-          <div class="box-remember-forgot">
-            <a href="#" class="forgot-link">Lupa password?</a>
-          </div>
-        </div>
-        <div class="form-group">
-          <button type="submit" class="btn-auth" id="loginBtn">Masuk
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-        <p class="auth-switch">Belum punya akun? <a href="{% url 'accounts:register' %}">Ayo daftar jadi member!</a></p>
+          <p class="auth-switch">Belum punya akun? <a href="{% url 'accounts:register' %}">Ayo daftar jadi member!</a></p>
       </form>
-    </div>
+    </section>
   </main>
 
   <!-- ===== FOOTER ===== -->

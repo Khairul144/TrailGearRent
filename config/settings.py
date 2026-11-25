@@ -287,8 +287,13 @@ LOGGING = {
             "propagate": False,
         },
         "django.request": {
-            "handlers": ["console"],
+            "handlers": ["security_file", "console"],
             "level": "ERROR",
+            "propagate": False,
+        },
+        "django.security.csrf": {
+            "handlers": ["security_file", "console"],
+            "level": "WARNING",
             "propagate": False,
         },
     },

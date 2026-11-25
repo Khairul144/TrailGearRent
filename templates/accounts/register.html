@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=3">
-  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=3">
-  <link rel="stylesheet" href="{% static 'css/account.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'assets/css/auth.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'css/account.css' %}?v=4">
 </head>
 <body id="top">
 
@@ -105,86 +105,137 @@
   </header>
 
   <!-- ===== REGISTER ===== -->
-  <main class="auth-main">
-    <div class="auth-card">
-      <h1 class="auth-title">Registrasi</h1>
+  <main class="auth-main auth-main--clean">
+    <section class="auth-card auth-card--register">
+      <div class="auth-form-head auth-form-head--center">
+        <span class="auth-pill">Member Baru</span>
+        <h1 class="auth-heading">Registrasi Akun</h1>
+        <p class="auth-subtitle">Isi data di bawah untuk membuat akun TrailGear Rent.</p>
+      </div>
 
       {% if error %}<div class="auth-msg show error" id="authMsg">{{ error }}</div>{% else %}<div class="auth-msg" id="authMsg"></div>{% endif %}
 
       <form id="registerForm" method="post" action="{% url 'accounts:register' %}" novalidate>
-        {% csrf_token %}
-        <div class="form-group">
-          <div class="auth-input">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </span>
-            <input type="text" id="regFirstName" name="first_name" placeholder="Nama depan" maxlength="150" autocomplete="given-name" value="{{ form.first_name.value|default_if_none:'' }}"{% if form.first_name.errors %} class="input-error"{% endif %}>
+          {% csrf_token %}
+          <div class="auth-field-grid">
+            <div class="form-group">
+              <label class="auth-label" for="regFirstName">Nama depan <span class="opt-tag">(opsional)</span></label>
+              <div class="auth-input">
+                <span class="input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </span>
+                <input type="text" id="regFirstName" name="first_name" placeholder="Nama depan" maxlength="150" autocomplete="given-name" value="{{ form.first_name.value|default_if_none:'' }}"{% if form.first_name.errors %} class="input-error"{% endif %}>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="auth-label" for="regLastName">Nama belakang <span class="opt-tag">(opsional)</span></label>
+              <div class="auth-input">
+                <span class="input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </span>
+                <input type="text" id="regLastName" name="last_name" placeholder="Nama belakang" maxlength="150" autocomplete="family-name" value="{{ form.last_name.value|default_if_none:'' }}"{% if form.last_name.errors %} class="input-error"{% endif %}>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="auth-label" for="regUsername">Username</label>
+              <div class="auth-input">
+                <span class="input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </span>
+                <input type="text" id="regUsername" name="username" placeholder="3–16 huruf, angka, _" maxlength="16" autocomplete="username" value="{{ form.username.value|default_if_none:'' }}" required autofocus{% if form.username.errors %} class="input-error"{% endif %}>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="auth-label" for="regPhone">No. telepon <span class="opt-tag">(opsional)</span></label>
+              <div class="auth-input">
+                <span class="input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+                </span>
+                <input type="tel" id="regPhone" name="phone_number" placeholder="08xxxxxxxxxx" maxlength="20" autocomplete="tel" value="{{ form.phone_number.value|default_if_none:'' }}"{% if form.phone_number.errors %} class="input-error"{% endif %}>
+              </div>
+            </div>
+            <div class="form-group form-group--full">
+              <label class="auth-label" for="regEmail">Email</label>
+              <div class="auth-input">
+                <span class="input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                </span>
+                <input type="email" id="regEmail" name="email" placeholder="nama@email.com" maxlength="254" autocomplete="email" value="{{ form.email.value|default_if_none:'' }}" required{% if form.email.errors %} class="input-error"{% endif %}>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="auth-label" for="regPass">Password</label>
+              <div class="auth-input has-pass-toggle">
+                <span class="input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <input type="password" id="regPass" name="password" placeholder="Buat password kuat" maxlength="128" autocomplete="new-password" aria-describedby="pwRequirements" required{% if form.password.errors %} class="input-error"{% endif %}>
+                <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password" aria-pressed="false" title="Tampilkan password">
+                  <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                  <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="auth-label" for="regPass2">Konfirmasi password</label>
+              <div class="auth-input has-pass-toggle">
+                <span class="input-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <input type="password" id="regPass2" name="password_confirmation" placeholder="Ulangi password" maxlength="128" autocomplete="new-password" aria-describedby="pwMatchStatus" required{% if form.password_confirmation.errors %} class="input-error"{% endif %}>
+                <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan konfirmasi password" aria-pressed="false" title="Tampilkan konfirmasi password">
+                  <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                  <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="form-group">
-          <div class="auth-input">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </span>
-            <input type="text" id="regLastName" name="last_name" placeholder="Nama belakang" maxlength="150" autocomplete="family-name" value="{{ form.last_name.value|default_if_none:'' }}"{% if form.last_name.errors %} class="input-error"{% endif %}>
+
+          <!-- Real-time Password Requirement Checklist & Konfirmasi Match -->
+          <div class="pw-feedback-box" id="pwRequirements" aria-live="polite">
+            <div class="pw-feedback-header">
+              <span class="pw-feedback-title">Password requirements</span>
+              <span class="pw-match-badge" id="pwMatchStatus">
+                <span class="req-mark" aria-hidden="true">○</span>
+                <span class="match-text">Password belum cocok</span>
+              </span>
+            </div>
+            <ul class="pw-req-list">
+              <li class="pw-req-item" data-req="length">
+                <span class="req-mark" aria-hidden="true">○</span>
+                <span>Minimal 8 karakter</span>
+              </li>
+              <li class="pw-req-item" data-req="upper">
+                <span class="req-mark" aria-hidden="true">○</span>
+                <span>Huruf kapital (A–Z)</span>
+              </li>
+              <li class="pw-req-item" data-req="lower">
+                <span class="req-mark" aria-hidden="true">○</span>
+                <span>Huruf kecil (a–z)</span>
+              </li>
+              <li class="pw-req-item" data-req="digit">
+                <span class="req-mark" aria-hidden="true">○</span>
+                <span>Angka (0–9)</span>
+              </li>
+              <li class="pw-req-item" data-req="symbol">
+                <span class="req-mark" aria-hidden="true">○</span>
+                <span>Simbol (!@#$...)</span>
+              </li>
+              <li class="pw-req-item" data-req="strength">
+                <span class="req-mark" aria-hidden="true">○</span>
+                <span>Bukan password umum/lemah</span>
+              </li>
+            </ul>
           </div>
-        </div>
-        <div class="form-group">
-          <div class="auth-input">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </span>
-            <input type="text" id="regUsername" name="username" placeholder="Username" maxlength="16" autocomplete="username" value="{{ form.username.value|default_if_none:'' }}" required autofocus{% if form.username.errors %} class="input-error"{% endif %}>
-          </div>
-        </div>
-        <div class="form-group">
-          <div class="auth-input">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-            </span>
-            <input type="email" id="regEmail" name="email" placeholder="Email" maxlength="254" autocomplete="email" value="{{ form.email.value|default_if_none:'' }}" required{% if form.email.errors %} class="input-error"{% endif %}>
-          </div>
-        </div>
-        <div class="form-group">
-          <div class="auth-input">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
-            </span>
-            <input type="tel" id="regPhone" name="phone_number" placeholder="Nomor telepon (opsional)" maxlength="20" autocomplete="tel" value="{{ form.phone_number.value|default_if_none:'' }}"{% if form.phone_number.errors %} class="input-error"{% endif %}>
-          </div>
-        </div>
-        <div class="form-group">
-          <div class="auth-input has-pass-toggle">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </span>
-            <input type="password" id="regPass" name="password" placeholder="Password" maxlength="128" autocomplete="new-password" required{% if form.password.errors %} class="input-error"{% endif %}>
-            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan password" aria-pressed="false" title="Tampilkan password">
-              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
-              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+
+          <div class="auth-submit-row">
+            <button type="submit" class="btn-auth" id="registerBtn">Daftar Sekarang
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
           </div>
-        </div>
-        <div class="form-group">
-          <div class="auth-input has-pass-toggle">
-            <span class="input-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </span>
-            <input type="password" id="regPass2" name="password_confirmation" placeholder="Konfirmasi password" maxlength="128" autocomplete="new-password" required{% if form.password_confirmation.errors %} class="input-error"{% endif %}>
-            <button type="button" class="pass-toggle" data-pass-toggle aria-label="Tampilkan konfirmasi password" aria-pressed="false" title="Tampilkan konfirmasi password">
-              <svg class="icon-eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
-              <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none" hidden><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="form-group">
-          <button type="submit" class="btn-auth" id="registerBtn">Register
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-        <p class="auth-switch">Sudah punya akun? <a href="{% url 'accounts:login' %}">Masuk di sini!</a></p>
+          <p class="auth-switch">Sudah punya akun? <a href="{% url 'accounts:login' %}">Masuk di sini!</a></p>
       </form>
-    </div>
+    </section>
   </main>
 
   <!-- ===== FOOTER ===== -->
@@ -266,9 +317,97 @@
     hamburger.addEventListener("click", e => { e.stopPropagation(); mainNav.classList.toggle("open"); });
     document.addEventListener("click", e => { if (!mainNav.contains(e.target)) mainNav.classList.remove("open"); });
 
-    // Validasi register (frontend saja — backend menyusul)
+    // Validasi register & feedback real-time (hanya UX — validasi backend tetap sumber kebenaran)
     const form = document.getElementById("registerForm");
     const msg = document.getElementById("authMsg");
+    const firstNameEl = document.getElementById("regFirstName");
+    const lastNameEl = document.getElementById("regLastName");
+    const usernameEl = document.getElementById("regUsername");
+    const emailEl = document.getElementById("regEmail");
+    const phoneEl = document.getElementById("regPhone");
+    const passEl = document.getElementById("regPass");
+    const pass2El = document.getElementById("regPass2");
+    const matchStatusEl = document.getElementById("pwMatchStatus");
+
+    const SPECIAL_CHARS = "!@#$%^&*()_+-=[]{};:'\",.<>/?\\|`~";
+    const COMMON_WEAK = new Set([
+      "password", "password1", "password1!", "password123", "password123!",
+      "p@ssword", "p@ssw0rd", "passw0rd", "qwerty123", "qwerty123!",
+      "12345678", "123456789", "1234567890", "admin123", "admin123!",
+      "welcome1", "welcome1!", "letmein1", "iloveyou", "abc12345",
+      "trailgear", "trailgear123", "trailgear1!"
+    ]);
+
+    function hasAllowedSymbol(val) {
+      for (let i = 0; i < val.length; i++) {
+        if (SPECIAL_CHARS.includes(val[i])) return true;
+      }
+      return false;
+    }
+
+    function isNotCommonOrSimilar(val) {
+      if (!val) return false;
+      const lower = val.toLowerCase();
+      if (/^[0-9]+$/.test(val)) return false;
+      if (COMMON_WEAK.has(lower)) return false;
+      const emailLocal = (emailEl.value || "").trim().toLowerCase().split("@")[0];
+      const attrs = [
+        (usernameEl.value || "").trim().toLowerCase(),
+        (firstNameEl.value || "").trim().toLowerCase(),
+        (lastNameEl.value || "").trim().toLowerCase(),
+        emailLocal
+      ];
+      for (const attr of attrs) {
+        if (attr.length >= 3 && lower.includes(attr)) return false;
+      }
+      return true;
+    }
+
+    function setReqState(key, met, warn) {
+      const li = document.querySelector(`.pw-req-item[data-req="${key}"]`);
+      if (!li) return;
+      li.classList.toggle("is-met", Boolean(met));
+      li.classList.toggle("is-warn", Boolean(warn && !met));
+      const mark = li.querySelector(".req-mark");
+      if (mark) mark.textContent = met ? "✓" : "○";
+    }
+
+    function updatePasswordFeedback() {
+      const val = passEl.value || "";
+      const conf = pass2El.value || "";
+      const hasInput = val.length > 0;
+
+      setReqState("length", val.length >= 8 && val.length <= 128, false);
+      setReqState("upper", /[A-Z]/.test(val), false);
+      setReqState("lower", /[a-z]/.test(val), false);
+      setReqState("digit", /[0-9]/.test(val), false);
+      setReqState("symbol", hasAllowedSymbol(val), false);
+      setReqState("strength", hasInput && isNotCommonOrSimilar(val), hasInput && !isNotCommonOrSimilar(val));
+
+      const markEl = matchStatusEl.querySelector(".req-mark");
+      const textEl = matchStatusEl.querySelector(".match-text");
+      if (!conf && !val) {
+        matchStatusEl.classList.remove("is-match", "is-mismatch");
+        if (markEl) markEl.textContent = "○";
+        if (textEl) textEl.textContent = "Password belum cocok";
+      } else if (conf && val === conf) {
+        matchStatusEl.classList.add("is-match");
+        matchStatusEl.classList.remove("is-mismatch");
+        if (markEl) markEl.textContent = "✓";
+        if (textEl) textEl.textContent = "Password cocok";
+      } else {
+        matchStatusEl.classList.remove("is-match");
+        matchStatusEl.classList.toggle("is-mismatch", conf.length > 0);
+        if (markEl) markEl.textContent = "○";
+        if (textEl) textEl.textContent = "Password belum cocok";
+      }
+    }
+
+    [passEl, pass2El, usernameEl, firstNameEl, lastNameEl, emailEl].forEach(el => {
+      if (el) el.addEventListener("input", updatePasswordFeedback);
+    });
+    updatePasswordFeedback();
+
     function showMsg(text, type) {
       msg.textContent = text;
       msg.className = "auth-msg show " + type;
@@ -280,31 +419,24 @@
       return el;
     }
     form.addEventListener("submit", e => {
-      const firstName = document.getElementById("regFirstName");
-      const lastName = document.getElementById("regLastName");
-      const username = document.getElementById("regUsername");
-      const email = document.getElementById("regEmail");
-      const phone = document.getElementById("regPhone");
-      const pass = document.getElementById("regPass");
-      const pass2 = document.getElementById("regPass2");
-      [firstName, lastName, username, email, phone, pass, pass2].forEach(el => el.classList.remove("input-error"));
+      [firstNameEl, lastNameEl, usernameEl, emailEl, phoneEl, passEl, pass2El].forEach(el => el.classList.remove("input-error"));
 
-      // Validasi klien hanya UX; aturan sebenarnya ada di server.
-      if (!username.value.trim() || username.value.trim().length < 3) { err("regUsername"); showMsg("Username minimal 3 karakter.", "error"); return; }
-      if (!/^[A-Za-z0-9_]+$/.test(username.value.trim())) { err("regUsername"); showMsg("Username hanya boleh huruf, angka, dan underscore.", "error"); return; }
-      if (!email.value.trim()) { err("regEmail"); showMsg("Email wajib diisi.", "error"); return; }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { err("regEmail"); showMsg("Format email tidak valid.", "error"); return; }
-      if (phone.value.trim() && !/^\+?[0-9][0-9\s\-()]{6,19}$/.test(phone.value.trim())) { err("regPhone"); showMsg("Nomor telepon tidak valid.", "error"); return; }
-      if (!pass.value) { err("regPass"); showMsg("Password wajib diisi.", "error"); return; }
-      if (pass.value.length < 8) { err("regPass"); showMsg("Password minimal 8 karakter.", "error"); return; }
-      if (pass.value.length > 128) { err("regPass"); showMsg("Password maksimal 128 karakter.", "error"); return; }
-      if (!/[a-z]/.test(pass.value)) { err("regPass"); showMsg("Password harus mengandung huruf kecil.", "error"); return; }
-      if (!/[A-Z]/.test(pass.value)) { err("regPass"); showMsg("Password harus mengandung huruf kapital.", "error"); return; }
-      if (!/[0-9]/.test(pass.value)) { err("regPass"); showMsg("Password harus mengandung angka.", "error"); return; }
-      if (!/[^A-Za-z0-9\s]/.test(pass.value)) { err("regPass"); showMsg("Password harus mengandung simbol.", "error"); return; }
-      if (pass.value !== pass2.value) { err("regPass2"); showMsg("Konfirmasi password tidak cocok.", "error"); return; }
-      pass.type = "password";
-      pass2.type = "password";
+      // Validasi klien hanya UX; aturan sebenarnya tetap divalidasi di server Django.
+      if (!usernameEl.value.trim() || usernameEl.value.trim().length < 3) { e.preventDefault(); err("regUsername"); showMsg("Username minimal 3 karakter.", "error"); return; }
+      if (!/^[A-Za-z0-9_]+$/.test(usernameEl.value.trim())) { e.preventDefault(); err("regUsername"); showMsg("Username hanya boleh huruf, angka, dan underscore.", "error"); return; }
+      if (!emailEl.value.trim()) { e.preventDefault(); err("regEmail"); showMsg("Email wajib diisi.", "error"); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())) { e.preventDefault(); err("regEmail"); showMsg("Format email tidak valid.", "error"); return; }
+      if (phoneEl.value.trim() && !/^\+?[0-9][0-9\s\-()]{6,19}$/.test(phoneEl.value.trim())) { e.preventDefault(); err("regPhone"); showMsg("Nomor telepon tidak valid.", "error"); return; }
+      if (!passEl.value) { e.preventDefault(); err("regPass"); showMsg("Password wajib diisi.", "error"); return; }
+      if (passEl.value.length < 8) { e.preventDefault(); err("regPass"); showMsg("Password minimal 8 karakter.", "error"); return; }
+      if (passEl.value.length > 128) { e.preventDefault(); err("regPass"); showMsg("Password maksimal 128 karakter.", "error"); return; }
+      if (!/[a-z]/.test(passEl.value)) { e.preventDefault(); err("regPass"); showMsg("Password harus mengandung huruf kecil.", "error"); return; }
+      if (!/[A-Z]/.test(passEl.value)) { e.preventDefault(); err("regPass"); showMsg("Password harus mengandung huruf kapital.", "error"); return; }
+      if (!/[0-9]/.test(passEl.value)) { e.preventDefault(); err("regPass"); showMsg("Password harus mengandung angka.", "error"); return; }
+      if (!hasAllowedSymbol(passEl.value)) { e.preventDefault(); err("regPass"); showMsg("Password harus mengandung minimal satu simbol.", "error"); return; }
+      if (passEl.value !== pass2El.value) { e.preventDefault(); err("regPass2"); showMsg("Konfirmasi password tidak cocok.", "error"); return; }
+      passEl.type = "password";
+      pass2El.type = "password";
     });
 
     // Toggle lihat / sembunyikan password

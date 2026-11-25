@@ -1,0 +1,208 @@
+﻿=== FILTER AKTIVITAS MENCURIGAKAN DI LOG POSTGRESQL 18 (F1, F2, F3, C2, C3, Stage 5) ===
+
+
+TimeGenerated : 26/11/2026 00.39.38
+EntryType     : Information
+Message       : 2026-11-26 00:39:38.775 +07 [28656] postgres@TrailGear_auth 127.0.0.1(64030) LOG:  statement: DROP TABL
+                E IF EXISTS uji_audit_tmp;
+                
+
+TimeGenerated : 26/11/2026 00.41.10
+EntryType     : Information
+Message       : 2026-11-26 00:41:10.608 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE (UPPER("a
+                ccounts_user"."username"::text) = UPPER(''' OR 1=1 --') OR UPPER("accounts_user"."email"::text) = UPPER
+                (''' OR 1=1 --')) ORDER BY "accounts_user"."id" ASC LIMIT 1
+                
+
+TimeGenerated : 26/11/2026 00.41.10
+EntryType     : Information
+Message       : 2026-11-26 00:41:10.605 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE UPPER("ac
+                counts_user"."email"::text) = UPPER(''' OR 1=1 --') ORDER BY "accounts_user"."date_joined" DESC LIMIT 1
+                
+
+TimeGenerated : 26/11/2026 00.41.10
+EntryType     : Information
+Message       : 2026-11-26 00:41:10.602 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE UPPER("ac
+                counts_user"."username"::text) = UPPER(''' OR 1=1 --') ORDER BY "accounts_user"."date_joined" DESC LIMI
+                T 1
+                
+
+TimeGenerated : 26/11/2026 00.41.15
+EntryType     : Information
+Message       : 2026-11-26 00:41:15.129 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE "accounts
+                _user"."username" = ''' OR 1=1 --' LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.18
+EntryType     : Information
+Message       : 2026-11-26 00:41:18.780 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: UPDATE "ac
+                counts_user" SET "password" = 'pbkdf2_sha256$1500000$QT8T3uNxtykxfrLLOctlMN$cimIGs9NdqcWw00RRQlf/SuQ8kc
+                /yxBPBdrcOAK05C8=', "last_login" = '2026-11-25 17:41:10.322674+00:00'::timestamptz, "is_superuser" = fa
+                lse, "username" = 'm8_attacker', "first_name" = '<img src=x onerror=alert(1)>', "last_name" = 'Lab', "i
+                s_staff" = false, "is_active" = true, "date_joined" = '2026-11-25 17:39:38.783590+00:00'::timestamptz, 
+                "email" = 'm8_attacker@lab.local', "phone_number" = '081234567890', "address" = 'Jl. Uji XSS', "failed_
+                login_attempts" = 0, "locked_until" = NULL, "password_changed_at" = '2026-11-25 17:39:43.185139+00:00':
+                :timestamptz WHERE "accounts_user"."id" = 6
+                
+
+TimeGenerated : 26/11/2026 00.41.18
+EntryType     : Information
+Message       : 2026-11-26 00:41:18.404 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: INSERT INT
+                O "accounts_securityevent" ("user_id", "event_type", "status", "ip_address", "user_agent", "description
+                ", "timestamp") VALUES (NULL, 'LOGIN_FAILED', 'FAILURE', '127.0.0.1'::inet, '', 'identifier="'' OR 1=1 
+                --"', '2026-11-25 17:41:18.404488+00:00'::timestamptz) RETURNING "accounts_securityevent"."id"
+                
+
+TimeGenerated : 26/11/2026 00.41.19
+EntryType     : Information
+Message       : 2026-11-26 00:41:19.034 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: INSERT INT
+                O "accounts_securityevent" ("user_id", "event_type", "status", "ip_address", "user_agent", "description
+                ", "timestamp") VALUES (2, 'MAKER_CHECKER_VIOLATION', 'BLOCKED', '127.0.0.1'::inet, '', 'order=TG-20261
+                126-QNTA maker=2 checker=2 action=confirm', '2026-11-25 17:41:19.034407+00:00'::timestamptz) RETURNING 
+                "accounts_securityevent"."id"
+                
+
+TimeGenerated : 26/11/2026 00.41.22
+EntryType     : Information
+Message       : 2026-11-26 00:41:22.635 +07 [10648] postgres@TrailGear_auth 127.0.0.1(60528) LOG:  statement: CREATE TA
+                BLE IF NOT EXISTS uji_audit_tmp (id SERIAL PRIMARY KEY, nama TEXT, nominal INT, created_at TIMESTAMPTZ 
+                DEFAULT NOW());
+                
+
+TimeGenerated : 26/11/2026 00.41.22
+EntryType     : Information
+Message       : 2026-11-26 00:41:22.731 +07 [10648] postgres@TrailGear_auth 127.0.0.1(60528) LOG:  statement: INSERT IN
+                TO uji_audit_tmp (nama, nominal) VALUES ('Andi Uji Modul 8', 100000);
+                
+
+TimeGenerated : 26/11/2026 00.41.22
+EntryType     : Error
+Message       : 2026-11-26 00:41:22.906 +07 [1796] postgres@TrailGear_auth 127.0.0.1(60530) ERROR:  permission denied f
+                or table accounts_securityevent
+                2026-11-26 00:41:22.906 +07 [1796] postgres@TrailGear_auth 127.0.0.1(60530) STATEMENT:  DELETE FROM acc
+                ounts_securityevent;
+                
+
+TimeGenerated : 26/11/2026 00.41.22
+EntryType     : Error
+Message       : 2026-11-26 00:41:22.980 +07 [16716] normal_user@TrailGear_auth 127.0.0.1(60531) FATAL:  password authen
+                tication failed for user "normal_user"
+                2026-11-26 00:41:22.980 +07 [16716] normal_user@TrailGear_auth 127.0.0.1(60531) DETAIL:  Connection mat
+                ched file "D:/Apps/PostgreSQL18/data/pg_hba.conf" line 125: "host    all             normal_user     12
+                7.0.0.1/32            scram-sha-256"
+                
+
+TimeGenerated : 26/11/2026 00.41.22
+EntryType     : Information
+Message       : 2026-11-26 00:41:22.894 +07 [1796] postgres@TrailGear_auth 127.0.0.1(60530) LOG:  statement: DELETE FRO
+                M accounts_securityevent;
+                
+
+TimeGenerated : 26/11/2026 00.41.22
+EntryType     : Information
+Message       : 2026-11-26 00:41:22.733 +07 [10648] postgres@TrailGear_auth 127.0.0.1(60528) LOG:  statement: SELECT id
+                , nama, nominal FROM uji_audit_tmp;
+                
+
+TimeGenerated : 26/11/2026 00.41.22
+EntryType     : Information
+Message       : 2026-11-26 00:41:22.817 +07 [23816] postgres@TrailGear_auth 127.0.0.1(60529) LOG:  statement: DROP TABL
+                E uji_audit_tmp;
+                
+
+TimeGenerated : 26/11/2026 00.41.23
+EntryType     : Error
+Message       : 2026-11-26 00:41:23.144 +07 [24736] normal_user@TrailGear_auth 127.0.0.1(60532) FATAL:  password authen
+                tication failed for user "normal_user"
+                2026-11-26 00:41:23.144 +07 [24736] normal_user@TrailGear_auth 127.0.0.1(60532) DETAIL:  Connection mat
+                ched file "D:/Apps/PostgreSQL18/data/pg_hba.conf" line 125: "host    all             normal_user     12
+                7.0.0.1/32            scram-sha-256"
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.319 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT COU
+                NT(*) AS "__count" FROM "catalog_product" INNER JOIN "catalog_category" ON ("catalog_product"."category
+                _id" = "catalog_category"."id") WHERE ("catalog_category"."is_active" AND "catalog_product"."is_active"
+                 AND (UPPER("catalog_product"."name"::text) LIKE UPPER('%'' OR 1=1 --%') OR UPPER("catalog_product"."br
+                and_name"::text) LIKE UPPER('%'' OR 1=1 --%') OR UPPER("catalog_product"."description"::text) LIKE UPPE
+                R('%'' OR 1=1 --%') OR UPPER("catalog_category"."name"::text) LIKE UPPER('%'' OR 1=1 --%')))
+                
+
+TimeGenerated : 26/11/2026 00.41.45
+EntryType     : Information
+Message       : 2026-11-26 00:41:45.018 +07 [10812] postgres@TrailGear_auth 127.0.0.1(63010) LOG:  statement: DROP TABL
+                E IF EXISTS uji_audit_tmp;
+                
+
+TimeGenerated : 26/11/2026 00.43.32
+EntryType     : Information
+Message       : 2026-11-26 00:43:32.517 +07 [27048] postgres@TrailGear_auth 127.0.0.1(52821) LOG:  statement: SELECT 'u
+                sers' AS item, string_agg(username, ', ' ORDER BY id) AS detail, count(*) AS cnt FROM accounts_user
+                	UNION ALL SELECT 'products', 'active catalog', count(*) FROM catalog_product
+                	UNION ALL SELECT 'orders', 'rental orders', count(*) FROM rentals_rental_order
+                	UNION ALL SELECT 'security_events', 'post-cleanup', count(*) FROM accounts_securityevent
+                	UNION ALL SELECT 'inventory_logs', 'catalog_inventory_log', count(*) FROM catalog_inventory_log
+                	UNION ALL SELECT 'uji_audit_tmp', 'dummy table exists', count(*) FROM pg_tables WHERE tablename='uji_a
+                udit_tmp';
+                
+
+
+
+
+=== FILTER AKTIVITAS MENCURIGAKAN DI logs/security.log (BLOCKED / FAILURE / WARNING / ADMIN) ===
+2026-11-26 00:41:10,347 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/cashier/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:10,388 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/orders/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:10,412 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/orders/lookup/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:10,441 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/ role=Customer butuh=Admin
+2026-11-26 00:41:10,463 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/security/ role=Customer butuh=Admin
+2026-11-26 00:41:10,483 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/users/add/ role=Customer butuh=Admin
+2026-11-26 00:41:10,534 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/ role=Cashier butuh=Admin
+2026-11-26 00:41:10,558 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/users/ role=Cashier butuh=Admin
+2026-11-26 00:41:10,583 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/security/reset-ratelimit/ role=Cashier butuh=Admin
+2026-11-26 00:41:18,406 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=127.0.0.1 user_id=None desc=identifier="' OR 1=1 --"
+2026-11-26 00:41:18,904 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=order_detail ditolak order=TG-20261126-UT2Z
+2026-11-26 00:41:18,928 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=proof_file ditolak order=TG-20261126-UT2Z
+2026-11-26 00:41:18,949 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=customer_cancel IDOR order=TG-20261126-UT2Z
+2026-11-26 00:41:18,965 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=upload_proof IDOR order=TG-20261126-UT2Z
+2026-11-26 00:41:18,993 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/orders/TG-20261126-UT2Z/confirm/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:19,037 | INFO | trailgear.security | event=MAKER_CHECKER_VIOLATION status=BLOCKED ip=127.0.0.1 user_id=2 desc=order=TG-20261126-QNTA maker=2 checker=2 action=confirm
+2026-11-26 00:41:19,063 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/products/ role=Customer butuh=Admin
+2026-11-26 00:41:19,090 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/products/ role=Cashier butuh=Admin
+2026-11-26 00:41:19,185 | INFO | trailgear.security | event=ADMIN_USER_UPDATED status=SUCCESS ip=127.0.0.1 user_id=1 desc=action=toggle_active target_user=6 target_username=m8_attacker is_active=False
+2026-11-26 00:41:19,208 | INFO | trailgear.security | event=ADMIN_USER_UPDATED status=SUCCESS ip=127.0.0.1 user_id=1 desc=action=toggle_active target_user=6 target_username=m8_attacker is_active=True
+2026-11-26 00:41:19,230 | INFO | trailgear.security | event=ADMIN_SECURITY_OVERRIDE status=SUCCESS ip=127.0.0.1 user_id=1 desc=action=reset_ratelimit_ip target_ip=10.0.0.99
+2026-11-26 00:41:28,769 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=198.51.100.77 user_id=None desc=identifier='m8_attacker'
+2026-11-26 00:41:34,637 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=198.51.100.77 user_id=None desc=identifier='m8_attacker'
+2026-11-26 00:41:40,592 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=198.51.100.77 user_id=None desc=identifier='m8_attacker'
+2026-11-26 00:41:43,211 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=path=/dashboard/cashier/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:43,229 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=path=/dashboard/admin/security/ role=Customer butuh=Admin
+2026-11-26 00:41:43,270 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=order_detail ditolak order=TG-20261126-UT2Z
+2026-11-26 00:41:43,284 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=customer_cancel IDOR order=TG-20261126-UT2Z
+2026-11-26 00:41:43,302 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=path=/dashboard/orders/TG-20261126-UT2Z/confirm/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:42:06,974 | INFO | trailgear.security | event=ADMIN_USER_UPDATED status=SUCCESS ip=127.0.0.1 user_id=4 desc=action=profile_role target_user=5 role=Customer->Cashier active=True->True
+2026-11-26 00:42:07,099 | INFO | trailgear.security | event=ADMIN_SECURITY_OVERRIDE status=SUCCESS ip=127.0.0.1 user_id=4 desc=action=unlock_user target_user=5 target_username=cust_mgr
+2026-11-26 00:42:12,938 | INFO | trailgear.security | event=ADMIN_SECURITY_OVERRIDE status=SUCCESS ip=127.0.0.1 user_id=6 desc=action=reset_ratelimit_ip target_ip=127.0.0.1
+2026-11-26 00:42:25,259 | INFO | trailgear.security | event=ADMIN_USER_UPDATED status=SUCCESS ip=127.0.0.1 user_id=10 desc=action=profile_role target_user=11 role=Customer->Cashier active=True->True
+2026-11-26 00:42:25,284 | INFO | trailgear.security | event=ADMIN_USER_UPDATED status=SUCCESS ip=127.0.0.1 user_id=10 desc=action=toggle_active target_user=11 target_username=cust_mgr is_active=False
+2026-11-26 00:43:33,788 | WARNING | django.security.csrf | Forbidden (CSRF cookie not set.): /login/

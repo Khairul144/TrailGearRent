@@ -1,0 +1,58 @@
+﻿SHOW logging_collector;
+ logging_collector 
+-------------------
+ off
+(1 row)
+
+SHOW log_statement;
+ log_statement 
+---------------
+ none
+(1 row)
+
+SHOW log_connections;
+ log_connections 
+-----------------
+ 
+(1 row)
+
+SHOW log_disconnections;
+ log_disconnections 
+--------------------
+ off
+(1 row)
+
+SHOW log_line_prefix;
+ log_line_prefix 
+-----------------
+ %m [%p] 
+(1 row)
+
+SHOW log_directory;
+ log_directory 
+---------------
+ log
+(1 row)
+
+SHOW log_filename;
+          log_filename          
+--------------------------------
+ postgresql-%Y-%m-%d_%H%M%S.log
+(1 row)
+
+SELECT pg_current_logfile();
+ pg_current_logfile 
+--------------------
+ 
+(1 row)
+
+SELECT 'accounts_securityevent' AS tbl, count(*) FROM accounts_securityevent
+UNION ALL SELECT 'catalog_inventory_log', count(*) FROM catalog_inventory_log
+UNION ALL SELECT 'django_admin_log', count(*) FROM django_admin_log;
+          tbl           | count 
+------------------------+-------
+ accounts_securityevent |     0
+ catalog_inventory_log  |   167
+ django_admin_log       |     0
+(3 rows)
+

@@ -1,0 +1,31 @@
+=== UJI 1: secure_user TANPA SSL (sslmode=disable) ===
+psql: error: connection to server at "127.0.0.1", port 5432 failed: FATAL:  pg_hba.conf rejects connection for host "127.0.0.1", user "secure_user", database "TrailGear_auth", no encryption
+
+=== UJI 2: secure_user DENGAN SSL (sslmode=verify-full) ===
+Connection Information
+      Parameter       |         Value          
+----------------------+------------------------
+ Database             | TrailGear_auth
+ Client User          | secure_user
+ Host                 | 127.0.0.1
+ Server Port          | 5432
+ Options              | 
+ Protocol Version     | 3.0
+ Password Used        | true
+ GSSAPI Authenticated | false
+ Backend PID          | 26748
+ SSL Connection       | true
+ SSL Library          | OpenSSL
+ SSL Protocol         | TLSv1.3
+ SSL Key Bits         | 256
+ SSL Cipher           | TLS_AES_256_GCM_SHA384
+ SSL Compression      | false
+ ALPN                 | postgresql
+ Superuser            | off
+ Hot Standby          | off
+(18 rows)
+
+ koneksi_ssl_berhasil 
+----------------------
+                    1
+(1 row)

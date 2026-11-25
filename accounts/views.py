@@ -555,6 +555,16 @@ def admin_user_manage(request, user_id):
             )
             for ip in set(ip_candidates + ["127.0.0.1"]):
                 ratelimit.reset_ip(ip, [target.username, target.email])
+            log_event(
+                request,
+                SecurityEvent.ADMIN_SECURITY_OVERRIDE,
+                SecurityEvent.STATUS_SUCCESS,
+                user=request.user,
+                description=(
+                    f"action=unlock_user target_user={target.pk} "
+                    f"target_username={target.username}"
+                ),
+            )
             messages.success(
                 request,
                 f"Kunci akun @{target.username} telah dibuka dan counter gagal login direset.",
@@ -609,12 +619,25 @@ def admin_user_manage(request, user_id):
             elif target.pk == request.user.pk and new_role != ROLE_ADMIN:
                 messages.error(request, "Anda tidak dapat menurunkan role Admin akun sendiri.")
             elif profile_form.is_valid():
+                old_role = current_role
+                old_active = target.is_active
                 user_obj = profile_form.save(commit=False)
                 user_obj.is_active = want_active
                 if not user_obj.is_superuser:
                     user_obj.is_staff = new_role == ROLE_ADMIN
                 user_obj.save()
                 assign_role(user_obj, new_role, exclusive=True)
+                log_event(
+                    request,
+                    SecurityEvent.ADMIN_USER_UPDATED,
+                    SecurityEvent.STATUS_SUCCESS,
+                    user=request.user,
+                    description=(
+                        f"action=profile_role target_user={user_obj.pk} "
+                        f"role={old_role}->{new_role} "
+                        f"active={old_active}->{want_active}"
+                    ),
+                )
                 messages.success(
                     request,
                     f"Data & role akun @{user_obj.username} ({new_role}) berhasil disimpan.",
@@ -657,6 +680,16 @@ def admin_user_toggle(request, user_id):
     else:
         target.is_active = not target.is_active
         target.save(update_fields=["is_active"])
+        log_event(
+            request,
+            SecurityEvent.ADMIN_USER_UPDATED,
+            SecurityEvent.STATUS_SUCCESS,
+            user=request.user,
+            description=(
+                f"action=toggle_active target_user={target.pk} "
+                f"target_username={target.username} is_active={target.is_active}"
+            ),
+        )
         messages.success(
             request,
             f"Akun {target.username} {'diaktifkan' if target.is_active else 'dinonaktifkan'}.",
@@ -986,6 +1019,13 @@ def admin_reset_ratelimit(request):
 
     if mode == "all":
         ratelimit.reset_all()
+        log_event(
+            request,
+            SecurityEvent.ADMIN_SECURITY_OVERRIDE,
+            SecurityEvent.STATUS_SUCCESS,
+            user=request.user,
+            description="action=reset_ratelimit_all",
+        )
         messages.success(
             request,
             "Seluruh cache rate limit (registrasi & login semua IP) berhasil direset.",
@@ -997,6 +1037,16 @@ def admin_reset_ratelimit(request):
             target.locked_until = None
             target.save(update_fields=["failed_login_attempts", "locked_until"])
             ratelimit.reset_ip("127.0.0.1", [target.username, target.email])
+            log_event(
+                request,
+                SecurityEvent.ADMIN_SECURITY_OVERRIDE,
+                SecurityEvent.STATUS_SUCCESS,
+                user=request.user,
+                description=(
+                    f"action=unlock_user target_user={target.pk} "
+                    f"target_username={target.username}"
+                ),
+            )
             messages.success(
                 request,
                 f"Kunci akun @{target.username} telah dibuka & percobaan gagal direset ke 0.",
@@ -1008,6 +1058,13 @@ def admin_reset_ratelimit(request):
             User.objects.values_list("email", flat=True)
         )
         ratelimit.reset_ip(ip, identifiers)
+        log_event(
+            request,
+            SecurityEvent.ADMIN_SECURITY_OVERRIDE,
+            SecurityEvent.STATUS_SUCCESS,
+            user=request.user,
+            description=f"action=reset_ratelimit_ip target_ip={ip}",
+        )
         messages.success(
             request,
             f"Rate limit (registrasi & login) untuk IP {ip} berhasil dihapus.",

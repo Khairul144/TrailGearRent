@@ -182,6 +182,8 @@ class SecurityEvent(models.Model):
     ORDER_CANCELLED = "ORDER_CANCELLED"
     ORDER_APPROVED = "ORDER_APPROVED"
     MAKER_CHECKER_VIOLATION = "MAKER_CHECKER_VIOLATION"
+    ADMIN_USER_UPDATED = "ADMIN_USER_UPDATED"
+    ADMIN_SECURITY_OVERRIDE = "ADMIN_SECURITY_OVERRIDE"
 
     EVENT_CHOICES = [
         (REGISTER_SUCCESS, "Register berhasil"),
@@ -202,6 +204,8 @@ class SecurityEvent(models.Model):
         (ORDER_CANCELLED, "Pesanan dibatalkan pelanggan"),
         (ORDER_APPROVED, "Pesanan diverifikasi/disetujui checker"),
         (MAKER_CHECKER_VIOLATION, "Pelanggaran pemisahan role Maker-Checker"),
+        (ADMIN_USER_UPDATED, "Admin mengubah role/status akun"),
+        (ADMIN_SECURITY_OVERRIDE, "Admin membuka blokir/reset keamanan"),
     ]
 
     STATUS_SUCCESS = "SUCCESS"

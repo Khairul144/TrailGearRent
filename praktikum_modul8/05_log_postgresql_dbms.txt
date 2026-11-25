@@ -1,0 +1,297 @@
+=== BUKTI AUDIT LOG POSTGRESQL 18 (log_statement=all, log_connections=on, log_line_prefix='%m [%p] %q%u@%d %r ') ===
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.528 +07 [21612] postgres@TrailGear_auth 127.0.0.1(63009) LOG:  disconnection: sessi
+                on time: 0:00:00.037 user=postgres database=TrailGear_auth host=127.0.0.1 port=63009
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.521 +07 [21612] postgres@TrailGear_auth 127.0.0.1(63009) LOG:  statement: SELECT ev
+                ent_type, status, count(*) AS jumlah
+                	        FROM accounts_securityevent
+                	        GROUP BY event_type, status
+                	        ORDER BY event_type, status;
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.517 +07 [21612] postgres@TrailGear_auth 127.0.0.1(63009) LOG:  connection authorize
+                d: user=postgres database=TrailGear_auth application_name=psql SSL enabled (protocol=TLSv1.3, cipher=TL
+                S_AES_256_GCM_SHA384, bits=256)
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.516 +07 [21612] postgres@TrailGear_auth 127.0.0.1(63009) LOG:  connection authentic
+                ated: user="postgres" method=trust (D:/Apps/PostgreSQL18/data/pg_hba.conf:129)
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.500 +07 [21612] [unknown]@[unknown] 127.0.0.1(63009) LOG:  connection received: hos
+                t=127.0.0.1 port=63009
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.451 +07 [29904] postgres@TrailGear_auth 127.0.0.1(63008) LOG:  disconnection: sessi
+                on time: 0:00:00.050 user=postgres database=TrailGear_auth host=127.0.0.1 port=63008
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.434 +07 [29904] postgres@TrailGear_auth 127.0.0.1(63008) LOG:  statement: SELECT
+                	            to_char(e.timestamp AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD HH24:MI:SS.MS') AS waktu_wib,
+                	            e.ip_address,
+                	            COALESCE(u.username, 'anonymous') AS actor,
+                	            e.event_type,
+                	            e.status,
+                	            e.description
+                	        FROM accounts_securityevent e
+                	        LEFT JOIN accounts_user u ON u.id = e.user_id
+                	        WHERE e.ip_address = '198.51.100.77'
+                	        ORDER BY e.timestamp ASC;
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.431 +07 [29904] postgres@TrailGear_auth 127.0.0.1(63008) LOG:  connection authorize
+                d: user=postgres database=TrailGear_auth application_name=psql SSL enabled (protocol=TLSv1.3, cipher=TL
+                S_AES_256_GCM_SHA384, bits=256)
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.430 +07 [29904] postgres@TrailGear_auth 127.0.0.1(63008) LOG:  connection authentic
+                ated: user="postgres" method=trust (D:/Apps/PostgreSQL18/data/pg_hba.conf:129)
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.410 +07 [29904] [unknown]@[unknown] 127.0.0.1(63008) LOG:  connection received: hos
+                t=127.0.0.1 port=63008
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.359 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "dj
+                ango_session"."session_key", "django_session"."session_data", "django_session"."expire_date" FROM "djan
+                go_session" WHERE ("django_session"."expire_date" > '2026-11-25 17:41:43.358603+00:00'::timestamptz AND
+                 "django_session"."session_key" = '3uec8yr9v4vehrt1e9y9ocbsa16m23ir') LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.356 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: DELETE FRO
+                M "django_session" WHERE "django_session"."session_key" IN ('3uec8yr9v4vehrt1e9y9ocbsa16m23ir')
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.354 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "dj
+                ango_session"."session_key", "django_session"."session_data", "django_session"."expire_date" FROM "djan
+                go_session" WHERE "django_session"."session_key" = '3uec8yr9v4vehrt1e9y9ocbsa16m23ir' LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.352 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: INSERT INT
+                O "accounts_securityevent" ("user_id", "event_type", "status", "ip_address", "user_agent", "description
+                ", "timestamp") VALUES (6, 'LOGOUT', 'SUCCESS', '198.51.100.77'::inet, '', 'user_id=6', '2026-11-25 17:
+                41:43.352358+00:00'::timestamptz) RETURNING "accounts_securityevent"."id"
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.350 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE "accounts
+                _user"."id" = 6 LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.348 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "dj
+                ango_session"."session_key", "django_session"."session_data", "django_session"."expire_date" FROM "djan
+                go_session" WHERE ("django_session"."expire_date" > '2026-11-25 17:41:43.347636+00:00'::timestamptz AND
+                 "django_session"."session_key" = '3uec8yr9v4vehrt1e9y9ocbsa16m23ir') LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.329 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ca
+                talog_category"."id", "catalog_category"."name", "catalog_category"."slug", "catalog_category"."descrip
+                tion", "catalog_category"."icon_class", "catalog_category"."order", "catalog_category"."show_in_menu", 
+                "catalog_category"."is_active", "catalog_category"."created_at", "catalog_category"."updated_at" FROM "
+                catalog_category" WHERE ("catalog_category"."is_active" AND "catalog_category"."show_in_menu") ORDER BY
+                 "catalog_category"."order" ASC, "catalog_category"."name" ASC
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.328 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "re
+                ntals_cart"."id", "rentals_cart"."user_id", "rentals_cart"."session_key", "rentals_cart"."created_at", 
+                "rentals_cart"."updated_at" FROM "rentals_cart" WHERE ("rentals_cart"."session_key" = '3uec8yr9v4vehrt1
+                e9y9ocbsa16m23ir' AND "rentals_cart"."user_id" IS NULL) ORDER BY "rentals_cart"."updated_at" DESC LIMIT
+                 1
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.325 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "re
+                ntals_cart"."id", "rentals_cart"."user_id", "rentals_cart"."session_key", "rentals_cart"."created_at", 
+                "rentals_cart"."updated_at" FROM "rentals_cart" WHERE "rentals_cart"."user_id" = 6 ORDER BY "rentals_ca
+                rt"."updated_at" DESC LIMIT 1
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.323 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "au
+                th_group"."name" AS "name" FROM "auth_group" INNER JOIN "accounts_user_groups" ON ("auth_group"."id" = 
+                "accounts_user_groups"."group_id") WHERE "accounts_user_groups"."user_id" = 6
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.319 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT COU
+                NT(*) AS "__count" FROM "catalog_product" INNER JOIN "catalog_category" ON ("catalog_product"."category
+                _id" = "catalog_category"."id") WHERE ("catalog_category"."is_active" AND "catalog_product"."is_active"
+                 AND (UPPER("catalog_product"."name"::text) LIKE UPPER('%'' OR 1=1 --%') OR UPPER("catalog_product"."br
+                and_name"::text) LIKE UPPER('%'' OR 1=1 --%') OR UPPER("catalog_product"."description"::text) LIKE UPPE
+                R('%'' OR 1=1 --%') OR UPPER("catalog_category"."name"::text) LIKE UPPER('%'' OR 1=1 --%')))
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.315 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ca
+                talog_category"."id", "catalog_category"."name", "catalog_category"."slug", "catalog_category"."descrip
+                tion", "catalog_category"."icon_class", "catalog_category"."order", "catalog_category"."show_in_menu", 
+                "catalog_category"."is_active", "catalog_category"."created_at", "catalog_category"."updated_at" FROM "
+                catalog_category" WHERE "catalog_category"."is_active" ORDER BY "catalog_category"."order" ASC, "catalo
+                g_category"."name" ASC
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.313 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE "accounts
+                _user"."id" = 6 LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.311 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "dj
+                ango_session"."session_key", "django_session"."session_data", "django_session"."expire_date" FROM "djan
+                go_session" WHERE ("django_session"."expire_date" > '2026-11-25 17:41:43.310435+00:00'::timestamptz AND
+                 "django_session"."session_key" = '3uec8yr9v4vehrt1e9y9ocbsa16m23ir') LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.308 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "re
+                ntals_cart"."id", "rentals_cart"."user_id", "rentals_cart"."session_key", "rentals_cart"."created_at", 
+                "rentals_cart"."updated_at" FROM "rentals_cart" WHERE ("rentals_cart"."session_key" = '3uec8yr9v4vehrt1
+                e9y9ocbsa16m23ir' AND "rentals_cart"."user_id" IS NULL) ORDER BY "rentals_cart"."updated_at" DESC LIMIT
+                 1
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.306 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "re
+                ntals_cart"."id", "rentals_cart"."user_id", "rentals_cart"."session_key", "rentals_cart"."created_at", 
+                "rentals_cart"."updated_at" FROM "rentals_cart" WHERE "rentals_cart"."user_id" = 6 ORDER BY "rentals_ca
+                rt"."updated_at" DESC LIMIT 1
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.303 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "au
+                th_group"."name" AS "name" FROM "auth_group" INNER JOIN "accounts_user_groups" ON ("auth_group"."id" = 
+                "accounts_user_groups"."group_id") WHERE "accounts_user_groups"."user_id" = 6
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.301 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: INSERT INT
+                O "accounts_securityevent" ("user_id", "event_type", "status", "ip_address", "user_agent", "description
+                ", "timestamp") VALUES (6, 'ACCESS_DENIED', 'BLOCKED', '198.51.100.77'::inet, '', 'path=/dashboard/orde
+                rs/TG-20261126-UT2Z/confirm/ role=Customer butuh=Cashier,Admin', '2026-11-25 17:41:43.301189+00:00'::ti
+                mestamptz) RETURNING "accounts_securityevent"."id"
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.299 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "au
+                th_group"."name" AS "name" FROM "auth_group" INNER JOIN "accounts_user_groups" ON ("auth_group"."id" = 
+                "accounts_user_groups"."group_id") WHERE "accounts_user_groups"."user_id" = 6
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.296 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "au
+                th_group"."name" AS "name" FROM "auth_group" INNER JOIN "accounts_user_groups" ON ("auth_group"."id" = 
+                "accounts_user_groups"."group_id") WHERE "accounts_user_groups"."user_id" = 6
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.293 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE "accounts
+                _user"."id" = 6 LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.290 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "dj
+                ango_session"."session_key", "django_session"."session_data", "django_session"."expire_date" FROM "djan
+                go_session" WHERE ("django_session"."expire_date" > '2026-11-25 17:41:43.287405+00:00'::timestamptz AND
+                 "django_session"."session_key" = '3uec8yr9v4vehrt1e9y9ocbsa16m23ir') LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.283 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: INSERT INT
+                O "accounts_securityevent" ("user_id", "event_type", "status", "ip_address", "user_agent", "description
+                ", "timestamp") VALUES (6, 'ACCESS_DENIED', 'BLOCKED', '198.51.100.77'::inet, '', 'customer_cancel IDOR
+                 order=TG-20261126-UT2Z', '2026-11-25 17:41:43.282906+00:00'::timestamptz) RETURNING "accounts_security
+                event"."id"
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.278 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "re
+                ntals_rental_order"."id", "rentals_rental_order"."order_code", "rentals_rental_order"."user_id", "renta
+                ls_rental_order"."full_name", "rentals_rental_order"."phone_number", "rentals_rental_order"."id_card_nu
+                mber", "rentals_rental_order"."id_card_type", "rentals_rental_order"."pickup_plan_date", "rentals_renta
+                l_order"."return_plan_date", "rentals_rental_order"."status", "rentals_rental_order"."total_rental_fee"
+                , "rentals_rental_order"."grand_total", "rentals_rental_order"."notes", "rentals_rental_order"."payment
+                _method", "rentals_rental_order"."payment_proof", "rentals_rental_order"."payment_proof_uploaded_at", "
+                rentals_rental_order"."actual_return_date", "rentals_rental_order"."overdue_days", "rentals_rental_orde
+                r"."overdue_fine", "rentals_rental_order"."damage_fine", "rentals_rental_order"."total_fine", "rentals_
+                rental_order"."fine_payment_status", "rentals_rental_order"."return_notes", "rentals_rental_order"."ret
+                urned_by_staff_id", "rentals_rental_order"."stock_deducted", "rentals_rental_order"."created_at", "rent
+                als_rental_order"."updated_at" FROM "rentals_rental_order" WHERE "rentals_rental_order"."order_code" = 
+                'TG-20261126-UT2Z' LIMIT 21
+                
+
+TimeGenerated : 26/11/2026 00.41.43
+EntryType     : Information
+Message       : 2026-11-26 00:41:43.275 +07 [10808] tg_user@TrailGear_auth 127.0.0.1(64029) LOG:  statement: SELECT "ac
+                counts_user"."id", "accounts_user"."password", "accounts_user"."last_login", "accounts_user"."is_superu
+                ser", "accounts_user"."username", "accounts_user"."first_name", "accounts_user"."last_name", "accounts_
+                user"."is_staff", "accounts_user"."is_active", "accounts_user"."date_joined", "accounts_user"."email", 
+                "accounts_user"."phone_number", "accounts_user"."address", "accounts_user"."failed_login_attempts", "ac
+                counts_user"."locked_until", "accounts_user"."password_changed_at" FROM "accounts_user" WHERE "accounts
+                _user"."id" = 6 LIMIT 21

@@ -1,0 +1,55 @@
+=== REKAP TABEL accounts_securityevent SELAMA SIMULASI MODUL VIII ===
+SELECT event_type, status, count(*) AS jumlah
+        FROM accounts_securityevent
+        GROUP BY event_type, status
+        ORDER BY event_type, status;
+       event_type        | status  | jumlah 
+-------------------------+---------+--------
+ ACCESS_DENIED           | BLOCKED |     21
+ ACCOUNT_DISABLED        | FAILURE |      1
+ ACCOUNT_LOCKED          | BLOCKED |      1
+ ADMIN_SECURITY_OVERRIDE | SUCCESS |      1
+ ADMIN_USER_UPDATED      | SUCCESS |      2
+ LOGIN_FAILED            | FAILURE |     18
+ LOGIN_SUCCESS           | SUCCESS |      2
+ LOGOUT                  | SUCCESS |      2
+ MAKER_CHECKER_VIOLATION | BLOCKED |      1
+ RATE_LIMIT_LOGIN        | BLOCKED |      1
+(10 rows)
+
+=== 35 BARIS TERAKHIR logs/security.log ===
+2026-11-26 00:41:10,217 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=127.0.0.1 user_id=None desc=identifier='m8_disabled'
+2026-11-26 00:41:10,271 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=127.0.0.1 user_id=7 desc=Akun terkunci sementara; login ditolak.
+2026-11-26 00:41:10,347 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/cashier/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:10,388 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/orders/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:10,412 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/orders/lookup/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:10,441 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/ role=Customer butuh=Admin
+2026-11-26 00:41:10,463 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/security/ role=Customer butuh=Admin
+2026-11-26 00:41:10,483 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/users/add/ role=Customer butuh=Admin
+2026-11-26 00:41:10,534 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/ role=Cashier butuh=Admin
+2026-11-26 00:41:10,558 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/users/ role=Cashier butuh=Admin
+2026-11-26 00:41:10,583 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/security/reset-ratelimit/ role=Cashier butuh=Admin
+2026-11-26 00:41:18,406 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=127.0.0.1 user_id=None desc=identifier="' OR 1=1 --"
+2026-11-26 00:41:18,904 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=order_detail ditolak order=TG-20261126-UT2Z
+2026-11-26 00:41:18,928 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=proof_file ditolak order=TG-20261126-UT2Z
+2026-11-26 00:41:18,949 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=customer_cancel IDOR order=TG-20261126-UT2Z
+2026-11-26 00:41:18,965 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=upload_proof IDOR order=TG-20261126-UT2Z
+2026-11-26 00:41:18,993 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/orders/TG-20261126-UT2Z/confirm/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:19,037 | INFO | trailgear.security | event=MAKER_CHECKER_VIOLATION status=BLOCKED ip=127.0.0.1 user_id=2 desc=order=TG-20261126-QNTA maker=2 checker=2 action=confirm
+2026-11-26 00:41:19,063 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=6 desc=path=/dashboard/admin/products/ role=Customer butuh=Admin
+2026-11-26 00:41:19,090 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=127.0.0.1 user_id=2 desc=path=/dashboard/admin/products/ role=Cashier butuh=Admin
+2026-11-26 00:41:19,185 | INFO | trailgear.security | event=ADMIN_USER_UPDATED status=SUCCESS ip=127.0.0.1 user_id=1 desc=action=toggle_active target_user=6 target_username=m8_attacker is_active=False
+2026-11-26 00:41:19,208 | INFO | trailgear.security | event=ADMIN_USER_UPDATED status=SUCCESS ip=127.0.0.1 user_id=1 desc=action=toggle_active target_user=6 target_username=m8_attacker is_active=True
+2026-11-26 00:41:19,230 | INFO | trailgear.security | event=ADMIN_SECURITY_OVERRIDE status=SUCCESS ip=127.0.0.1 user_id=1 desc=action=reset_ratelimit_ip target_ip=10.0.0.99
+2026-11-26 00:41:22,507 | INFO | trailgear.security | event=LOGIN_SUCCESS status=SUCCESS ip=127.0.0.1 user_id=6 desc=user_id=6
+2026-11-26 00:41:22,526 | INFO | trailgear.security | event=LOGOUT status=SUCCESS ip=127.0.0.1 user_id=6 desc=user_id=6
+2026-11-26 00:41:28,769 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=198.51.100.77 user_id=None desc=identifier='m8_attacker'
+2026-11-26 00:41:34,637 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=198.51.100.77 user_id=None desc=identifier='m8_attacker'
+2026-11-26 00:41:40,592 | INFO | trailgear.security | event=LOGIN_FAILED status=FAILURE ip=198.51.100.77 user_id=None desc=identifier='m8_attacker'
+2026-11-26 00:41:43,185 | INFO | trailgear.security | event=LOGIN_SUCCESS status=SUCCESS ip=198.51.100.77 user_id=6 desc=user_id=6
+2026-11-26 00:41:43,211 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=path=/dashboard/cashier/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:43,229 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=path=/dashboard/admin/security/ role=Customer butuh=Admin
+2026-11-26 00:41:43,270 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=order_detail ditolak order=TG-20261126-UT2Z
+2026-11-26 00:41:43,284 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=customer_cancel IDOR order=TG-20261126-UT2Z
+2026-11-26 00:41:43,302 | INFO | trailgear.security | event=ACCESS_DENIED status=BLOCKED ip=198.51.100.77 user_id=6 desc=path=/dashboard/orders/TG-20261126-UT2Z/confirm/ role=Customer butuh=Cashier,Admin
+2026-11-26 00:41:43,353 | INFO | trailgear.security | event=LOGOUT status=SUCCESS ip=198.51.100.77 user_id=6 desc=user_id=6

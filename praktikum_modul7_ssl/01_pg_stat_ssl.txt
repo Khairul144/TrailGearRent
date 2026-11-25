@@ -1,0 +1,9 @@
+pid  | ssl | version |         cipher         | bits | client_dn 
+------+-----+---------+------------------------+------+-----------
+ 9440 | t   | TLSv1.3 | TLS_AES_256_GCM_SHA384 |  256 | 
+(1 row)
+
+ pid  |   usename   | ssl |         cipher         
+------+-------------+-----+------------------------
+ 9440 | secure_user | t   | TLS_AES_256_GCM_SHA384
+(1 row)
