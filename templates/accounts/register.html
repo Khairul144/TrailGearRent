@@ -265,7 +265,7 @@
           </div>
 
           <div class="auth-submit-row">
-            <button type="submit" class="btn-auth" id="registerBtn">Daftar Sekarang
+            <button type="submit" class="btn-auth" id="registerBtn" data-loading-text="Mendaftarkan akun...">Daftar Sekarang
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
           </div>
@@ -519,5 +519,6 @@
       });
     })();
   </script>
+  {% include "partials/loader.html" %}
 </body>
 </html>

@@ -1,0 +1,24 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/loader.css' %}?v=1">
+
+<!-- Progress bar transisi halaman (fixed top:0) -->
+<div class="tg-pagebar" id="tgPageBar" aria-hidden="true" hidden>
+  <div class="tg-pagebar-fill"></div>
+</div>
+
+<!-- Overlay loading kompas TrailGear -->
+<div class="tg-overlay" id="tgLoaderOverlay" role="status" aria-live="polite" aria-label="Memuat halaman" hidden>
+  <svg class="tg-compass" viewBox="0 0 80 80" aria-hidden="true">
+    <circle class="ring" cx="40" cy="40" r="34"/>
+    <circle class="ring-progress" cx="40" cy="40" r="34"/>
+    <g class="needle">
+      <polygon points="40,14 46,40 40,66 34,40" fill="#1f1f1f"/>
+      <polygon points="40,14 46,40 40,40" fill="#70f46d"/>
+      <polygon points="40,14 34,40 40,40" fill="#2d4a2c"/>
+    </g>
+    <circle cx="40" cy="40" r="4" fill="#ffffff" stroke="#1f1f1f" stroke-width="1.5"/>
+  </svg>
+  <p class="tg-overlay-text" id="tgLoaderText">Memuat TrailGear...</p>
+</div>
+
+<script src="{% static 'assets/js/loader.js' %}?v=1"></script>

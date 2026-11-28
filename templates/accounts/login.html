@@ -175,7 +175,7 @@
             <span class="auth-login-hint">Lupa password? Hubungi admin toko.</span>
           </div>
           <div class="auth-submit-row">
-            <button type="submit" class="btn-auth" id="loginBtn">Masuk
+            <button type="submit" class="btn-auth" id="loginBtn" data-loading-text="Memproses masuk...">Masuk
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
           </div>
@@ -338,5 +338,6 @@
       });
     })();
   </script>
+  {% include "partials/loader.html" %}
 </body>
 </html>

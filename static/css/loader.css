@@ -1,0 +1,145 @@
+/* ============================================================
+   TrailGear Rent — Compass Loading Animations
+   Adaptasi dari compass-loading.html menyesuaikan palet TrailGear
+   (--brand: #70f46d, --brand-dark: #2d4a2c, font: Urbanist)
+   ============================================================ */
+
+/* 1. Progress bar tipis di bagian paling atas halaman (transisi halaman) */
+.tg-pagebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.5px;
+  background: rgba(45, 74, 44, 0.12);
+  overflow: hidden;
+  z-index: 10001;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.tg-pagebar.is-active {
+  opacity: 1;
+}
+.tg-pagebar-fill {
+  position: absolute;
+  top: 0;
+  left: -35%;
+  height: 100%;
+  width: 35%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand-dark, #2d4a2c) 0%, var(--brand, #70f46d) 100%);
+  animation: tg-bar 1.15s ease-in-out infinite;
+}
+
+/* 2. Full-page Compass Overlay Loader */
+.tg-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+.tg-overlay.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.tg-overlay[hidden],
+.tg-pagebar[hidden] {
+  display: none !important;
+}
+
+.tg-compass {
+  width: 74px;
+  height: 74px;
+  filter: drop-shadow(0 6px 14px rgba(45, 74, 44, 0.14));
+}
+.tg-compass .ring {
+  fill: none;
+  stroke: var(--border, #dde1de);
+  stroke-width: 3;
+}
+.tg-compass .ring-progress {
+  fill: none;
+  stroke: var(--brand-dark, #2d4a2c);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-dasharray: 52 300;
+  transform-origin: center;
+  animation: tg-spin 1.25s linear infinite;
+}
+.tg-compass .needle {
+  transform-origin: center;
+  animation: tg-spin-needle 2s ease-in-out infinite;
+}
+.tg-overlay-text {
+  margin: 0;
+  font-family: "Urbanist", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--brand-dark, #2d4a2c);
+  letter-spacing: 0.3px;
+}
+
+/* 3. Mini-spinner kompas di dalam tombol submit */
+.tg-btn-loading {
+  pointer-events: none;
+  cursor: wait !important;
+  opacity: 0.85;
+}
+.tg-btn-loading-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  vertical-align: middle;
+}
+.tg-mini-compass {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  vertical-align: middle;
+  animation: tg-spin 0.9s linear infinite;
+}
+
+/* Keyframes */
+@keyframes tg-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes tg-spin-needle {
+  0%   { transform: rotate(0deg); }
+  50%  { transform: rotate(200deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes tg-bar {
+  0%   { left: -35%; }
+  100% { left: 100%; }
+}
+
+/* Aksesibilitas & cetak */
+@media (prefers-reduced-motion: reduce) {
+  .tg-compass .ring-progress,
+  .tg-compass .needle,
+  .tg-pagebar-fill,
+  .tg-mini-compass {
+    animation-duration: 3s;
+  }
+}
+@media print {
+  .tg-overlay,
+  .tg-pagebar {
+    display: none !important;
+  }
+}
